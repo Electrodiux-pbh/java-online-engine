@@ -84,12 +84,18 @@ public class World {
 
                 if (event instanceof SpawnEntityEvent spawnEvent) {
                     Entity entity = spawnEvent.getEntity();
+                    if (entity instanceof Player)
+                        continue;
+
                     addEntity(entity);
                     continue;
                 }
 
                 if (event instanceof DespawnEntityEvent spawnEvent) {
-                    removeEntity(spawnEvent.getEntityUUID());
+                    Entity entity = getEntity(spawnEvent.getEntityUUID());
+                    if (entity instanceof Player)
+                        continue;
+                    removeEntity(entity);
                 }
             }
         }
