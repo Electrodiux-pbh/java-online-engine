@@ -75,14 +75,14 @@ public class Client {
             }
         }
 
-        MoveEvent ev = new MoveEvent(player.getUUID(), move, rotation,
+        MoveEvent moveEvent = new MoveEvent(player.getUUID(), move, rotation,
                 Keyboard.isKeyTyped(GLFW.GLFW_KEY_SPACE),
                 Keyboard.isKeyTyped(GLFW.GLFW_KEY_ENTER));
 
         // Sync update with render using Lock
 
-        world.getEventsQueue().add(ev);
-        world.getProcesedEventsQueue().add(ev);
+        world.getEventsQueue().add(moveEvent);
+        world.getProcesedEventsQueue().add(moveEvent);
 
         updatePackets();
 

@@ -4,6 +4,9 @@ import org.joml.Matrix4f;
 
 public final class Maths {
 
+    private Maths() {
+    }
+
     public static float clamp(float min, float value, float max) {
         if (value < min)
             return min;

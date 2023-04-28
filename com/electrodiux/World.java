@@ -59,62 +59,33 @@ public class World {
             }
         }
 
+        updateEvents();
+    }
+
+    private void updateEvents() {
         for (Iterator<Event> it = eventsQueue.getQueue().iterator(); it.hasNext();) {
             Event event = it.next();
 
-            if (event instanceof MoveEvent moveEvent) {
-                Player player = getPlayer(moveEvent.getEntityUUID());
-
-                if (player != null) {
-                    player.getRigidBody().addForce(moveEvent.getMoveVector().getNormalized().mul(20),
-                            ForceMode.ACCELERATION);
-
-                    Vector3 rotation = moveEvent.getRotationVector();
-                    rotation.x(Maths.clamp((float) Math.PI / -2f, rotation.x(), (float) Math.PI / 2f));
-
-                    player.rotation().set(rotation);
-
-                    if (moveEvent.isJumping()) {
-                        player.getRigidBody().addForce(Vector3.UP.getMul(7), ForceMode.IMPULSE);
-                    }
-
-                    if (isServer) {
-                        if (moveEvent.isSpawning()) {
-                            BallEntity entity = new BallEntity(UUID.randomUUID(), new Vector3(player.position()), 2.5f);
-
-                            addEntity(entity);
-                        }
-                    }
-                }
+            if (event instanceof MoveEvent ev) {
+                processMoveEvent(ev);
+                continue;
             }
 
             if (!isServer) {
-                if (event instanceof PositionEvent positionEvent) {
-                    Entity entity = getEntity(positionEvent.getEntityUUID());
-                    if (entity != null) {
-                        entity.position().set(positionEvent.getPosition());
-                    }
+                if (event instanceof PositionEvent ev) {
+                    processPositionEvent(ev);
+                    continue;
                 }
 
-                if (event instanceof PlayerConnectionEvent connectionEvent) {
-                    switch (connectionEvent.getConnectionType()) {
-                        case JOIN:
-                            if (!containsPlayer(connectionEvent.getPlayerUUID())) {
-                                Player player = connectionEvent.getPlayer();
-                                if (player != null) {
-                                    addPlayer(player);
-                                }
-                            }
-                            break;
-                        case LEAVE:
-                            removePlayer(connectionEvent.getPlayerUUID());
-                            break;
-                    }
+                if (event instanceof PlayerConnectionEvent ev) {
+                    processPlayerConnectionEvent(ev);
+                    continue;
                 }
 
                 if (event instanceof SpawnEntityEvent spawnEvent) {
                     Entity entity = spawnEvent.getEntity();
                     addEntity(entity);
+                    continue;
                 }
 
                 if (event instanceof DespawnEntityEvent spawnEvent) {
@@ -124,6 +95,54 @@ public class World {
         }
 
         eventsQueue.clear();
+    }
+
+    private void processMoveEvent(MoveEvent event) {
+        Player player = getPlayer(event.getEntityUUID());
+
+        if (player != null) {
+            player.getRigidBody().addForce(event.getMoveVector().getNormalized().mul(20),
+                    ForceMode.ACCELERATION);
+
+            Vector3 rotation = event.getRotationVector();
+            rotation.x(Maths.clamp((float) Math.PI / -2f, rotation.x(), (float) Math.PI / 2f));
+
+            player.rotation().set(rotation);
+
+            if (event.isJumping()) {
+                player.getRigidBody().addForce(Vector3.UP.getMul(7), ForceMode.IMPULSE);
+            }
+
+            if (isServer) {
+                if (event.isSpawning()) {
+                    BallEntity entity = new BallEntity(UUID.randomUUID(), new Vector3(player.position()), 2.5f);
+                    addEntity(entity);
+                }
+            }
+        }
+    }
+
+    private void processPositionEvent(PositionEvent event) {
+        Entity entity = getEntity(event.getEntityUUID());
+        if (entity != null) {
+            entity.position().set(event.getPosition());
+        }
+    }
+
+    private void processPlayerConnectionEvent(PlayerConnectionEvent event) {
+        switch (event.getConnectionType()) {
+            case JOIN:
+                if (!containsPlayer(event.getPlayerUUID())) {
+                    Player player = event.getPlayer();
+                    if (player != null) {
+                        addPlayer(player);
+                    }
+                }
+                break;
+            case LEAVE:
+                removePlayer(event.getPlayerUUID());
+                break;
+        }
     }
 
     private void sendEventToAll(Event event) {
@@ -144,34 +163,6 @@ public class World {
         addPlayer(player);
 
         return player;
-    }
-
-    public boolean addPlayer(Player player) {
-        if (player == null)
-            return false;
-
-        if (!entities.containsKey(player.getUUID())) {
-            players.add(player);
-
-            addEntity(player);
-
-            events.add(new PlayerConnectionEvent(player, PlayerConnectionEvent.ConnectionType.JOIN));
-            System.out.println(player.getName() + " joined game");
-            return true;
-        }
-        return false;
-    }
-
-    public void addEntity(Entity entity) {
-        if (entity == null)
-            return;
-
-        physics.addRigidBody(entity.getRigidBody());
-
-        if (isServer)
-            events.add(new SpawnEntityEvent(entity));
-
-        entities.put(entity.getUUID(), entity);
     }
 
     public void addPlayers(Collection<Player> players) {
@@ -256,6 +247,34 @@ public class World {
         return entities.containsKey(player);
     }
 
+    public boolean addPlayer(Player player) {
+        if (player == null)
+            return false;
+
+        if (!entities.containsKey(player.getUUID())) {
+            players.add(player);
+
+            addEntity(player);
+
+            events.add(new PlayerConnectionEvent(player, PlayerConnectionEvent.ConnectionType.JOIN));
+            System.out.println(player.getName() + " joined game");
+            return true;
+        }
+        return false;
+    }
+
+    public void addEntity(Entity entity) {
+        if (entity == null)
+            return;
+
+        physics.addRigidBody(entity.getRigidBody());
+
+        if (isServer)
+            events.add(new SpawnEntityEvent(entity));
+
+        entities.put(entity.getUUID(), entity);
+    }
+
     public Player getPlayer(UUID id) {
         if (entities.get(id) instanceof Player player)
             return player;
@@ -264,6 +283,14 @@ public class World {
 
     public Entity getEntity(UUID id) {
         return entities.get(id);
+    }
+
+    public int getPlayerCount() {
+        return players.size();
+    }
+
+    public int getEntityCount() {
+        return entities.size();
     }
 
 }

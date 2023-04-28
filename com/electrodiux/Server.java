@@ -26,6 +26,7 @@ public class Server {
     private Thread serverSocketThread;
 
     private Collection<ClientHandler> clients = new HashSet<>();
+    private Collection<Event> packets = new ArrayList<>();
 
     private World world;
 
@@ -127,8 +128,6 @@ public class Server {
         world.removePlayer(clientHandler.getPlayer());
     }
 
-    private Collection<Event> packets = new ArrayList<>();
-
     private void dispatchPackets() {
         for (ClientHandler clientHandler : this.clients) {
             clientHandler.dispatchPackets();
@@ -155,7 +154,7 @@ public class Server {
                 clientHandler.disconnect();
                 break;
             case EVENT: {
-                registerEventPacket(p.getCastPacket(EventPacket.class));
+                registerEventPacket(p.getCastPacket(EventPacket.class), clientHandler.getPlayer());
                 break;
             }
             case COMPRESSED: {
@@ -170,8 +169,17 @@ public class Server {
         }
     }
 
-    private synchronized void registerEventPacket(EventPacket packet) {
-        packets.addAll(Arrays.asList(packet.getEvents()));
+    private synchronized void registerEventPacket(EventPacket packet, Player source) {
+        Event[] events = packet.getEvents();
+
+        for (int i = 0; i < events.length; i++) {
+            Event e = events[i];
+            if (e != null) {
+                e.setSource(source);
+            }
+        }
+
+        packets.addAll(Arrays.asList(events));
     }
 
     public ClientConnectPacket handleClientConnect(ClientHandler clientHandler, ClientConnectPacket packet) {
