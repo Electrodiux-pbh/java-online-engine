@@ -20,7 +20,7 @@ public class SphereCollider extends Collider {
         if (other instanceof SphereCollider sphereCollider) {
             return sphereCollisions(this, sphereCollider);
         }
-        return null;
+        return CollisionResult.failed();
     }
 
     public static CollisionResult sphereCollisions(SphereCollider a, SphereCollider b) {
@@ -54,7 +54,7 @@ public class SphereCollider extends Collider {
             return new CollisionResult(true, body1Translation, body2Translation, mdt);
         }
 
-        return new CollisionResult(false, new Vector3(), new Vector3(), new Vector3());
+        return CollisionResult.failed();
     }
 
     public float getRadius() {
