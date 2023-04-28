@@ -78,13 +78,13 @@ public final class PhysicsSystem {
                 }
 
                 CollisionResult result = collider1.collidesWith(collider2);
-                calculateCollisionInteraction(body1, body2, result);
+                calculateCollisionInteraction(body1, body2, result != null ? result : CollisionResult.failed());
             }
         }
     }
 
     private static void calculateCollisionInteraction(RigidBody body1, RigidBody body2, CollisionResult result) {
-        if (result == null || !result.collides())
+        if (!result.collides())
             return;
 
         Vector3 mtd = result.mtd();
