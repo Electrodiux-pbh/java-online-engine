@@ -36,6 +36,7 @@ public class Server {
         world = new World(true);
 
         BallEntity ball = new BallEntity(UUID.randomUUID(), new Vector3(15, 5, 15), 5f);
+        ball.getRigidBody().mass(40f);
         ball.getRigidBody().setKinematic(false);
         world.addEntity(ball);
 

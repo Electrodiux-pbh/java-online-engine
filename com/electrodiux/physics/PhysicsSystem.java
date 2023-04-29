@@ -17,7 +17,7 @@ public final class PhysicsSystem {
     }
 
     public synchronized void updateSimulation() {
-        // Update forces
+        // Update bodies
         for (RigidBody body : rigidBodies) {
             if (body.isKinematic()) {
                 body.addForce(gravity, ForceMode.ACCELERATION);
@@ -25,17 +25,16 @@ public final class PhysicsSystem {
                 // Update translations
                 body.updateBodyTranslation();
             }
+
+            // Re compute bounding box
+            Collider collider = body.getCollider();
+            if (collider != null) {
+                collider.calculateBoundingBox();
+            }
         }
 
         // Collisions
         checkCollisions();
-
-        for (RigidBody body : rigidBodies) {
-            if (body.isKinematic()) {
-                // Temporarily y=0 collision
-                floorCollision(body);
-            }
-        }
     }
 
     private void floorCollision(RigidBody body) {
@@ -52,26 +51,22 @@ public final class PhysicsSystem {
         } else {
             body.friction = 0.5f;
         }
-
-        Collider collider = body.getCollider();
-        if (collider != null) {
-            collider.calculateBoundingBox();
-        }
     }
 
     private void checkCollisions() {
-        first: for (int i = 0; i < rigidBodies.size(); i++) {
-            second: for (int j = i + 1; j < rigidBodies.size(); j++) {
-                RigidBody body1 = rigidBodies.get(i);
-                RigidBody body2 = rigidBodies.get(j);
+        body1: for (int i = 0; i < rigidBodies.size(); i++) {
+            RigidBody body1 = rigidBodies.get(i);
+            Collider collider1 = body1.getCollider();
 
-                Collider collider1 = body1.getCollider();
+            if (collider1 == null)
+                continue body1;
+
+            body2: for (int j = i + 1; j < rigidBodies.size(); j++) {
+                RigidBody body2 = rigidBodies.get(j);
                 Collider collider2 = body2.getCollider();
 
-                if (collider1 == null)
-                    continue first;
                 if (collider2 == null)
-                    continue second;
+                    continue body2;
 
                 if (!AABB.collides(collider1.getBoundingBox(), collider2.getBoundingBox())) {
                     continue;
@@ -80,6 +75,8 @@ public final class PhysicsSystem {
                 CollisionResult result = collider1.collidesWith(collider2);
                 calculateCollisionInteraction(body1, body2, result != null ? result : CollisionResult.failed());
             }
+
+            floorCollision(body1);
         }
     }
 
