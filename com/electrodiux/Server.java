@@ -10,6 +10,7 @@ import java.util.HashSet;
 import java.util.UUID;
 
 import com.electrodiux.entity.BallEntity;
+import com.electrodiux.entity.BoxEntity;
 import com.electrodiux.event.Event;
 import com.electrodiux.math.Vector3;
 import com.electrodiux.network.ClientHandler;
@@ -39,6 +40,10 @@ public class Server {
         ball.getRigidBody().mass(40f);
         ball.getRigidBody().setKinematic(false);
         world.addEntity(ball);
+
+        BoxEntity box = new BoxEntity(UUID.randomUUID(), new Vector3(-15, 2, 0), new Vector3(2, 4, 5));
+        box.getRigidBody().mass(20f);
+        world.addEntity(box);
 
         timer = new Timer(20);
         timer.setHandler(this::update);
