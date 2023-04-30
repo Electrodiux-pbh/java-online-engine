@@ -81,6 +81,15 @@ public final class AABB implements Serializable {
         maxZ = position.z + halfSize;
     }
 
+    public boolean isPointInside(Vector3 point) {
+        return (point.x >= minX &&
+                point.x <= maxX &&
+                point.y >= minY &&
+                point.y <= maxY &&
+                point.z >= minZ &&
+                point.z <= maxZ);
+    }
+
     public static boolean collides(AABB a, AABB b) {
         // check for overlap along all three axes
         if (a == null || b == null)
@@ -174,6 +183,14 @@ public final class AABB implements Serializable {
         return maxY;
     }
 
+    public float getMaxZ() {
+        return maxZ;
+    }
+
+    public float getMinZ() {
+        return minZ;
+    }
+
     public void setMinX(float minX) {
         this.minX = minX;
     }
@@ -188,6 +205,14 @@ public final class AABB implements Serializable {
 
     public void setMaxY(float maxY) {
         this.maxY = maxY;
+    }
+
+    public void setMaxZ(float maxZ) {
+        this.maxZ = maxZ;
+    }
+
+    public void setMinZ(float minZ) {
+        this.minZ = minZ;
     }
 
 }

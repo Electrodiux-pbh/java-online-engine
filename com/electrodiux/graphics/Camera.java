@@ -100,6 +100,11 @@ public class Camera {
 		// }
 	}
 
+	public void setProjectionsToShader(Shader shader) {
+		shader.setMatrix4f("uProjection", getProjectionMatrix());
+		shader.setMatrix4f("uView", getViewMatrix());
+	}
+
 	public Matrix4f getProjectionMatrix() {
 		return projectionMatrix;
 	}

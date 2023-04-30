@@ -15,6 +15,7 @@ public class Color {
 	public static final Color LIGHT_GRAY = new Color(0.52941f, 0.52941f, 0.52941f, 1.0f);
 	public static final Color YELLOW = new Color(1.0f, 1.0f, 0.0f, 1.0f);
 	public static final Color PINK = new Color(1.0f, 0.0f, 1.0f, 1.0f);
+	public static final Color PURPLE = new Color(0.451f, 0.0941f, 0.8902f, 1.0f);
 
 	private float red, green, blue, alpha;
 

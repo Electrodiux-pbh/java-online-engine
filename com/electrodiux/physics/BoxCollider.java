@@ -24,17 +24,17 @@ public class BoxCollider extends Collider {
     }
 
     public Vector3 getMin() {
-        return center.getSubstract(size.getDiv(2));
+        return getPosition().getSubstract(size.getDiv(2));
     }
 
     public Vector3 getMax() {
-        return center.getAdded(size.getDiv(2));
+        return getPosition().getAdded(size.getDiv(2));
     }
 
     @Override
     public void calculateBoundingBox() {
         AABB aabb = getBoundingBox();
-        aabb.recomputeBoundaries(center, size);
+        aabb.recomputeBoundariesWithHalfSize(getPosition().getAdded(center), size);
     }
 
     @Override
@@ -99,5 +99,9 @@ public class BoxCollider extends Collider {
 
     public void setSize(Vector3 size) {
         this.size = size;
+    }
+
+    public Vector3 getPosition() {
+        return super.getPosition().getAdded(center);
     }
 }
