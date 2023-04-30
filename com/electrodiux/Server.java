@@ -9,8 +9,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.UUID;
 
-import com.electrodiux.entity.BallEntity;
-import com.electrodiux.entity.BoxEntity;
+import com.electrodiux.entity.ColliderEntity;
 import com.electrodiux.event.Event;
 import com.electrodiux.math.Vector3;
 import com.electrodiux.network.ClientHandler;
@@ -19,6 +18,8 @@ import com.electrodiux.network.packet.ClientConnectPacket;
 import com.electrodiux.network.packet.CompressedPacket;
 import com.electrodiux.network.packet.EventPacket;
 import com.electrodiux.network.packet.Packet;
+import com.electrodiux.physics.BoxCollider;
+import com.electrodiux.physics.SphereCollider;
 import com.electrodiux.util.Timer;
 
 public class Server {
@@ -36,12 +37,13 @@ public class Server {
     public void start() {
         world = new World(true);
 
-        BallEntity ball = new BallEntity(UUID.randomUUID(), new Vector3(15, 5, 15), 5f);
+        ColliderEntity ball = new ColliderEntity(UUID.randomUUID(), new Vector3(15, 5, 15), new SphereCollider(5f));
         ball.getRigidBody().mass(40f);
         ball.getRigidBody().setKinematic(false);
         world.addEntity(ball);
 
-        BoxEntity box = new BoxEntity(UUID.randomUUID(), new Vector3(-15, 2, 0), new Vector3(2, 4, 5));
+        ColliderEntity box = new ColliderEntity(UUID.randomUUID(), new Vector3(-15, 2, 0),
+                new BoxCollider(new Vector3(), new Vector3(2, 4, 5)));
         box.getRigidBody().mass(20f);
         world.addEntity(box);
 
