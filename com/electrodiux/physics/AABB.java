@@ -42,25 +42,52 @@ public final class AABB implements Serializable {
     }
 
     public void recomputeBoundaries(Vector3 position, Vector3 size) {
-        minX = position.x - size.x;
-        maxX = position.x + size.x;
+        float xSize = size.x / 2.0f;
+        minX = position.x - xSize;
+        maxX = position.x + xSize;
 
-        minY = position.y - size.y;
-        maxY = position.y + size.y;
+        float ySize = size.y / 2.0f;
+        minY = position.y - ySize;
+        maxY = position.y + ySize;
 
-        minZ = position.z - size.z;
-        maxZ = position.z + size.z;
+        float zSize = size.z / 2.0f;
+        minZ = position.z - zSize;
+        maxZ = position.z + zSize;
+    }
+
+    public void recomputeBoundariesWithHalfSize(Vector3 position, Vector3 halfSize) {
+        minX = position.x - halfSize.x;
+        maxX = position.x + halfSize.x;
+
+        minY = position.y - halfSize.y;
+        maxY = position.y + halfSize.y;
+
+        minZ = position.z - halfSize.z;
+        maxZ = position.z + halfSize.z;
     }
 
     public void recomputeBoundaries(Vector3 position, float size) {
-        minX = position.x - size;
-        maxX = position.x + size;
+        this.recomputeBoundariesWithHalfSize(position, size / 2.0f);
+    }
 
-        minY = position.y - size;
-        maxY = position.y + size;
+    public void recomputeBoundariesWithHalfSize(Vector3 position, float halfSize) {
+        minX = position.x - halfSize;
+        maxX = position.x + halfSize;
 
-        minZ = position.z - size;
-        maxZ = position.z + size;
+        minY = position.y - halfSize;
+        maxY = position.y + halfSize;
+
+        minZ = position.z - halfSize;
+        maxZ = position.z + halfSize;
+    }
+
+    public boolean isPointInside(Vector3 point) {
+        return (point.x >= minX &&
+                point.x <= maxX &&
+                point.y >= minY &&
+                point.y <= maxY &&
+                point.z >= minZ &&
+                point.z <= maxZ);
     }
 
     public static boolean collides(AABB a, AABB b) {
@@ -156,6 +183,14 @@ public final class AABB implements Serializable {
         return maxY;
     }
 
+    public float getMaxZ() {
+        return maxZ;
+    }
+
+    public float getMinZ() {
+        return minZ;
+    }
+
     public void setMinX(float minX) {
         this.minX = minX;
     }
@@ -170,6 +205,14 @@ public final class AABB implements Serializable {
 
     public void setMaxY(float maxY) {
         this.maxY = maxY;
+    }
+
+    public void setMaxZ(float maxZ) {
+        this.maxZ = maxZ;
+    }
+
+    public void setMinZ(float minZ) {
+        this.minZ = minZ;
     }
 
 }

@@ -17,8 +17,10 @@ public class SphereCollider extends Collider {
 
     @Override
     public CollisionResult collidesWith(Collider other) {
-        if (other instanceof SphereCollider sphereCollider) {
-            return sphereCollisions(this, sphereCollider);
+        if (other instanceof SphereCollider collider) {
+            return SphereCollider.sphereCollisions(this, collider);
+        } else if (other instanceof BoxCollider collider) {
+            return BoxCollider.boxSphereCollision(collider, this);
         }
         return CollisionResult.failed();
     }
@@ -28,7 +30,7 @@ public class SphereCollider extends Collider {
         RigidBody body2 = b.getRigidBody();
 
         if (body1 == null || body2 == null)
-            return null;
+            return CollisionResult.failed();
 
         Vector3 body1MassCenter = body1.globalCenterOfMass();
         Vector3 body2MassCenter = body2.globalCenterOfMass();
@@ -46,15 +48,16 @@ public class SphereCollider extends Collider {
             Vector3 mdt = body1MassCenter.getSubstract(body2MassCenter);
             mdt.magnitude(radiusSum - centerDistance);
 
-            Vector3 body1Translation = PhysicsSystem.getTranslationVectors(mdt, body1MassCenter, body2MassCenter,
-                    body1.velocity(), body2.velocity());
-            Vector3 body2Translation = PhysicsSystem.getTranslationVectors(mdt, body2MassCenter, body1MassCenter,
-                    body2.velocity(), body1.velocity());
-
-            return new CollisionResult(true, body1Translation, body2Translation, mdt);
+            return CollisionResult.successCollision(mdt, body1, body1MassCenter, body2, body2MassCenter);
         }
 
         return CollisionResult.failed();
+    }
+
+    @Override
+    public void calculateBoundingBox() {
+        AABB aabb = getBoundingBox();
+        aabb.recomputeBoundariesWithHalfSize(getPosition(), radius);
     }
 
     public float getRadius() {
@@ -63,11 +66,5 @@ public class SphereCollider extends Collider {
 
     public void setRadius(float radius) {
         this.radius = radius;
-    }
-
-    @Override
-    public void calculateBoundingBox() {
-        AABB aabb = getBoundingBox();
-        aabb.recomputeBoundaries(getRigidBody().position(), radius);
     }
 }

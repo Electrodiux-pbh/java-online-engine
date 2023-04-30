@@ -24,6 +24,7 @@ import com.electrodiux.World;
 import com.electrodiux.entity.Entity;
 import com.electrodiux.math.Maths;
 import com.electrodiux.math.Vector3;
+import com.electrodiux.physics.BoxCollider;
 import com.electrodiux.physics.Collider;
 import com.electrodiux.physics.SphereCollider;
 import com.electrodiux.terrain.Chunk;
@@ -67,6 +68,7 @@ public class GraphicManager implements Runnable {
             GLFW.glfwPollEvents();
             update(deltaTime);
             render();
+            DebugDraw.render(camera);
 
             // swapbuffers
             GLFW.glfwSwapBuffers(window.getWindowID());
@@ -86,7 +88,7 @@ public class GraphicManager implements Runnable {
     private Map<String, Texture> playerTextures = new HashMap<String, Texture>();
 
     private Model playerModel;
-    private Model sphereModel;
+    private Model sphereModel, cubeModel;
     private Texture defaultPlayerTexture;
 
     private Chunk chunk;
@@ -98,33 +100,50 @@ public class GraphicManager implements Runnable {
         GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
         camera.startFrame();
 
-        shader.setMatix4f("uProjection", camera.getProjectionMatrix());
-        shader.setMatix4f("uView", camera.getViewMatrix());
+        camera.setProjectionsToShader(shader);
 
         for (SceneObject sceneObject : sceneObjects) {
             if (sceneObject != null)
                 renderObject(sceneObject);
         }
 
-        GL30.glBindVertexArray(sphereModel.getVaoId());
-
-        GL20.glEnableVertexAttribArray(0);
-        GL20.glEnableVertexAttribArray(1);
-
         for (Entity entity : world.getEntitiesArray()) {
+            if (DebugDraw.isActive())
+                renderDebugEntity(entity);
+
             Collider collider = entity.getRigidBody().getCollider();
             if (collider instanceof SphereCollider sphere) {
                 Matrix4f transformMatrix = Maths.createTransformMatrix(entity.position(), entity.rotation(),
                         Vector3.mul(Vector3.ONE, sphere.getRadius()));
 
-                shader.setMatix4f("transformMatrix", transformMatrix);
+                shader.setMatrix4f("transformMatrix", transformMatrix);
+
+                GL30.glBindVertexArray(sphereModel.getVaoId());
+
+                GL20.glEnableVertexAttribArray(0);
+                GL20.glEnableVertexAttribArray(1);
 
                 GL11.glDrawElements(GL11.GL_TRIANGLES, sphereModel.getVertexCount(), GL11.GL_UNSIGNED_INT, 0);
+
+                GL20.glDisableVertexAttribArray(0);
+                GL20.glDisableVertexAttribArray(1);
+            } else if (collider instanceof BoxCollider box) {
+                Matrix4f transformMatrix = Maths.createTransformMatrix(entity.position().getAdded(box.getCenter()),
+                        entity.rotation(), box.getSize());
+
+                shader.setMatrix4f("transformMatrix", transformMatrix);
+
+                GL30.glBindVertexArray(cubeModel.getVaoId());
+
+                GL20.glEnableVertexAttribArray(0);
+                GL20.glEnableVertexAttribArray(1);
+
+                GL11.glDrawElements(GL11.GL_TRIANGLES, cubeModel.getVertexCount(), GL11.GL_UNSIGNED_INT, 0);
+
+                GL20.glDisableVertexAttribArray(0);
+                GL20.glDisableVertexAttribArray(1);
             }
         }
-
-        GL20.glDisableVertexAttribArray(0);
-        GL20.glDisableVertexAttribArray(1);
 
         GL30.glBindVertexArray(playerModel.getVaoId());
 
@@ -144,7 +163,7 @@ public class GraphicManager implements Runnable {
             Matrix4f transformMatrix = Maths.createTransformMatrix(player.position(),
                     new Vector3(0, -player.rotation().y(), 0), Vector3.ONE);
 
-            shader.setMatix4f("transformMatrix", transformMatrix);
+            shader.setMatrix4f("transformMatrix", transformMatrix);
 
             GL13.glActiveTexture(GL13.GL_TEXTURE0);
 
@@ -166,12 +185,34 @@ public class GraphicManager implements Runnable {
         camera.endFrame();
     }
 
+    private void renderDebugEntity(Entity entity) {
+        DebugDraw.addLine(entity.position(), entity.position().getAdded(entity.getRigidBody().velocity()), Color.LIME);
+
+        Collider playerCollider = player.getRigidBody().getCollider();
+
+        Collider collider = entity.getRigidBody().getCollider();
+        if (collider != null) {
+            collider.calculateBoundingBox();
+
+            /*
+             * Color PURPLE if is player bounding box
+             * Color BLUE if is a bounding box that is not touching player
+             * Color RED if the boundingbox is touching player
+             */
+
+            Color color = collider == playerCollider ? Color.PURPLE
+                    : (collider.checkAABBCollision(playerCollider.getBoundingBox()) ? Color.RED : Color.BLUE);
+
+            DebugDraw.addAABB(collider.getBoundingBox(), color, 0.001f);
+        }
+    }
+
     private void renderObject(SceneObject object) {
         renderObject(object.getModel(), object.getTexture(), object.getTransformationMatrix());
     }
 
     private void renderObject(Model model, Texture texture, Matrix4f transformMatrix) {
-        shader.setMatix4f("transformMatrix", transformMatrix);
+        shader.setMatrix4f("transformMatrix", transformMatrix);
 
         GL30.glBindVertexArray(model.getVaoId());
 
@@ -229,6 +270,8 @@ public class GraphicManager implements Runnable {
     }
 
     private void load() {
+        DebugDraw.load();
+
         camera = new Camera();
         camera.setBackgroundColor(Color.LIGHT_BLUE);
         camera.setAspectRatio(window.getWidth(), window.getHeight());
@@ -241,6 +284,7 @@ public class GraphicManager implements Runnable {
             defaultPlayerTexture = Loader.loadTexture("/assets/player.png", GL11.GL_NEAREST);
             playerModel = Loader.loadObjModel("/assets/player.obj");
             sphereModel = Loader.loadObjModel("/assets/sphere.obj");
+            cubeModel = Loader.loadObjModel("/assets/cube.obj");
         } catch (IOException e) {
             e.printStackTrace();
         }

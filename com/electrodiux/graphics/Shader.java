@@ -134,7 +134,7 @@ public class Shader {
         return id;
     }
 
-    public void setMatix4f(String varName, Matrix4f matrix) {
+    public void setMatrix4f(String varName, Matrix4f matrix) {
         int varLocation = GL20.glGetUniformLocation(shaderProgram, varName);
         use();
         FloatBuffer matrixBuff = BufferUtils.createFloatBuffer(16); // 4 * 4 matrix
@@ -142,7 +142,7 @@ public class Shader {
         GL20.glUniformMatrix4fv(varLocation, false, matrixBuff);
     }
 
-    public void setMatix3f(String varName, Matrix3f matrix) {
+    public void setMatrix3f(String varName, Matrix3f matrix) {
         int varLocation = GL20.glGetUniformLocation(shaderProgram, varName);
         use();
         FloatBuffer matrixBuff = BufferUtils.createFloatBuffer(9); // 3 * 3 matrix
@@ -150,7 +150,7 @@ public class Shader {
         GL20.glUniformMatrix3fv(varLocation, false, matrixBuff);
     }
 
-    public void setMatix2f(String varName, Matrix2f matrix) {
+    public void setMatrix2f(String varName, Matrix2f matrix) {
         int varLocation = GL20.glGetUniformLocation(shaderProgram, varName);
         use();
         FloatBuffer matrixBuff = BufferUtils.createFloatBuffer(4); // 2 * 2 matrix

@@ -9,6 +9,7 @@ import org.lwjgl.glfw.GLFW;
 import com.electrodiux.event.Event;
 import com.electrodiux.event.EventQueue;
 import com.electrodiux.event.MoveEvent;
+import com.electrodiux.graphics.DebugDraw;
 import com.electrodiux.graphics.GraphicManager;
 import com.electrodiux.graphics.Keyboard;
 import com.electrodiux.graphics.Mouse;
@@ -73,6 +74,10 @@ public class Client {
                 default:
                     graphicManager.cameraMode = 0;
             }
+        }
+
+        if (Keyboard.isKeyTyped(GLFW.GLFW_KEY_F1)) {
+            DebugDraw.setActive(!DebugDraw.isActive());
         }
 
         MoveEvent moveEvent = new MoveEvent(player.getUUID(), move, rotation,

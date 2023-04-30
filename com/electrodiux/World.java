@@ -7,7 +7,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.UUID;
 
-import com.electrodiux.entity.BallEntity;
+import com.electrodiux.entity.ColliderEntity;
 import com.electrodiux.entity.Entity;
 import com.electrodiux.event.DespawnEntityEvent;
 import com.electrodiux.event.Event;
@@ -20,6 +20,7 @@ import com.electrodiux.math.Maths;
 import com.electrodiux.math.Vector3;
 import com.electrodiux.physics.ForceMode;
 import com.electrodiux.physics.PhysicsSystem;
+import com.electrodiux.physics.SphereCollider;
 
 public class World {
 
@@ -121,7 +122,8 @@ public class World {
 
             if (isServer) {
                 if (event.isSpawning()) {
-                    BallEntity entity = new BallEntity(UUID.randomUUID(), new Vector3(player.position()), 2.5f);
+                    ColliderEntity entity = new ColliderEntity(UUID.randomUUID(), new Vector3(player.position()),
+                            new SphereCollider(2.5f));
                     addEntity(entity);
                 }
             }

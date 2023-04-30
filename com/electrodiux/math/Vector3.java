@@ -34,6 +34,10 @@ public class Vector3 implements Serializable {
     public Vector3() {
     }
 
+    public static Vector3 zeroVector() {
+        return new Vector3(0, 0, 0);
+    }
+
     public Vector3(float x, float y, float z) {
         this.x = x;
         this.y = y;
@@ -360,6 +364,10 @@ public class Vector3 implements Serializable {
         if (other == null)
             return false;
         return other.x == this.x && other.y == this.y && other.z == this.z;
+    }
+
+    public boolean equals(float x, float y, float z) {
+        return x == this.x && y == this.y && z == this.z;
     }
 
     @Override
