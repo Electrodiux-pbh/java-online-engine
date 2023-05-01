@@ -39,4 +39,4 @@ java -cp "libraries/*;OnlineEngine.jar" com.electrodiux.main.Main
 
 ### Using the LibrariesInstaller
 
-If you want to automatically install the libraries you can compile the `LibrariesInstaller.java` with the command `javac LibrariesInstaller.java`, this will generate a file called LibrariesInstaller.class. Then you can you can execute it using the command line `java LibrariesInstaller`. This will automatically download the libraries into a folder called `/libraries`, and generates a .bat file that executes the program using the specified libraries folder.
+If you want to automatically install the libraries you can execute the following command `java -cp "OnlineEngine.jar" com.electrodiux.libraries.LibrariesInstaller` in the cmd or with a .bat file

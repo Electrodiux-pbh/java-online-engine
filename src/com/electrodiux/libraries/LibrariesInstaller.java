@@ -1,3 +1,5 @@
+package com.electrodiux.libraries;
+
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -50,13 +52,18 @@ public class LibrariesInstaller {
 
         while (downloadingThreads > 0) {
             Thread.yield();
+            try {
+                Thread.sleep(1);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
 
         System.out.println("Creating run.bat file...");
 
         // Create .bat file to execute the program
         // java -cp "libraries/*;OnlineEngine.jar" com.electrodiux.main.Main
-        String batContent = "java -cp \"" + DESTINATION_FOLDER + "/*;" + JAR_FILE + "\"" + MAIN_CLASS;
+        String batContent = "java -cp \"" + DESTINATION_FOLDER + "/*;" + JAR_FILE + "\" " + MAIN_CLASS;
         Files.write(Paths.get("run.bat"), batContent.getBytes());
 
         System.out.println("Installation complete");
