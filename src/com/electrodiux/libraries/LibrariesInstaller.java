@@ -22,10 +22,6 @@ public class LibrariesInstaller {
     public static final String MAIN_CLASS = "com.electrodiux.main.Main";
     public static final String JAR_FILE = "OnlineEngine.jar";
 
-    public static final int DOWNLOAD_GROUP_SIZE = 10;
-
-    private static int downloadingThreads = 0;
-
     public static void main(String[] args) throws IOException {
         // Downloading file list from the GitHub API
         String fileList = new String(downloadFromUrl(FOLDER_API_URL));
@@ -35,27 +31,12 @@ public class LibrariesInstaller {
         for (int i = 1; i < fileNames.length; i++) {
             String fileName = fileNames[i].substring(1, fileNames[i].indexOf('"', 1));
             String fileUrl = RAW_FOLDER_API_URL + fileName;
-            downloadingThreads++;
-            Thread downloadThread = new Thread(() -> {
-                System.out.println("Downloading: '" + fileName + "' from: " + fileUrl);
-                try {
-                    downloadFile(fileUrl, DESTINATION_FOLDER + "/" + fileName);
-                } catch (IOException e) {
-                    System.err.println("An error occurred while downloading file '" + fileName + "'' from: " + fileUrl
-                            + " | Caused by: " + e.getMessage());
-                } finally {
-                    downloadingThreads--;
-                }
-            }, "Download");
-            downloadThread.start();
-        }
-
-        while (downloadingThreads > 0) {
-            Thread.yield();
+            System.out.println("Downloading: '" + fileName + "' from: " + fileUrl);
             try {
-                Thread.sleep(1);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+                downloadFile(fileUrl, DESTINATION_FOLDER + "/" + fileName);
+            } catch (IOException e) {
+                System.err.println("An error occurred while downloading file '" + fileName + "'' from: " + fileUrl
+                        + " | Caused by: " + e.getMessage());
             }
         }
 
