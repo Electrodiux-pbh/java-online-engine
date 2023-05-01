@@ -1,8 +1,10 @@
 package com.electrodiux.graphics;
 
-import com.electrodiux.math.Maths;
+import java.io.Serializable;
 
-public class Color {
+import com.electrodiux.math.MathUtils;
+
+public class Color implements Serializable {
 
 	public static final Color BLACK = new Color(0.0f, 0.0f, 0.0f, 1.0f);
 	public static final Color WHITE = new Color(1.0f, 1.0f, 1.0f, 1.0f);
@@ -69,12 +71,12 @@ public class Color {
 	}
 
 	public Color lerpColors(Color a, Color b, float t) {
-		t = Maths.clamp(0, t, 1);
+		t = MathUtils.clamp(0, t, 1);
 		Color c = new Color(
-				Maths.lerp(a.red, b.red, t),
-				Maths.lerp(a.green, b.green, t),
-				Maths.lerp(a.blue, b.blue, t),
-				Maths.lerp(a.alpha, b.alpha, t));
+				MathUtils.lerp(a.red, b.red, t),
+				MathUtils.lerp(a.green, b.green, t),
+				MathUtils.lerp(a.blue, b.blue, t),
+				MathUtils.lerp(a.alpha, b.alpha, t));
 
 		return c;
 	}

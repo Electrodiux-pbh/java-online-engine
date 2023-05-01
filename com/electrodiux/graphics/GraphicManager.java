@@ -22,7 +22,7 @@ import org.lwjgl.opengl.GL30;
 import com.electrodiux.Player;
 import com.electrodiux.World;
 import com.electrodiux.entity.Entity;
-import com.electrodiux.math.Maths;
+import com.electrodiux.math.MathUtils;
 import com.electrodiux.math.Vector3;
 import com.electrodiux.physics.BoxCollider;
 import com.electrodiux.physics.Collider;
@@ -113,7 +113,7 @@ public class GraphicManager implements Runnable {
 
             Collider collider = entity.getRigidBody().getCollider();
             if (collider instanceof SphereCollider sphere) {
-                Matrix4f transformMatrix = Maths.createTransformMatrix(entity.position(), entity.rotation(),
+                Matrix4f transformMatrix = MathUtils.createTransformMatrix(entity.position(), entity.rotation(),
                         Vector3.mul(Vector3.ONE, sphere.getRadius()));
 
                 shader.setMatrix4f("transformMatrix", transformMatrix);
@@ -128,7 +128,7 @@ public class GraphicManager implements Runnable {
                 GL20.glDisableVertexAttribArray(0);
                 GL20.glDisableVertexAttribArray(1);
             } else if (collider instanceof BoxCollider box) {
-                Matrix4f transformMatrix = Maths.createTransformMatrix(entity.position().getAdded(box.getCenter()),
+                Matrix4f transformMatrix = MathUtils.createTransformMatrix(entity.position().getAdded(box.getCenter()),
                         entity.rotation(), box.getSize());
 
                 shader.setMatrix4f("transformMatrix", transformMatrix);
@@ -160,7 +160,7 @@ public class GraphicManager implements Runnable {
                 texture = defaultPlayerTexture;
             // Texture texture = defaultPlayerTexture;
 
-            Matrix4f transformMatrix = Maths.createTransformMatrix(player.position(),
+            Matrix4f transformMatrix = MathUtils.createTransformMatrix(player.position(),
                     new Vector3(0, -player.rotation().y(), 0), Vector3.ONE);
 
             shader.setMatrix4f("transformMatrix", transformMatrix);
@@ -236,7 +236,7 @@ public class GraphicManager implements Runnable {
     }
 
     private void update(float deltaTime) {
-        cameraDistance = Maths.clamp(1, cameraDistance - Mouse.getScrollY(), 50);
+        cameraDistance = MathUtils.clamp(1, cameraDistance - Mouse.getScrollY(), 50);
 
         Vector3 pos = player.position();
 

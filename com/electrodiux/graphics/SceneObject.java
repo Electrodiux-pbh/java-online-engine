@@ -2,7 +2,7 @@ package com.electrodiux.graphics;
 
 import org.joml.Matrix4f;
 
-import com.electrodiux.math.Maths;
+import com.electrodiux.math.MathUtils;
 import com.electrodiux.math.Vector3;
 
 public class SceneObject {
@@ -64,7 +64,7 @@ public class SceneObject {
     }
 
     public Matrix4f getTransformationMatrix() {
-        return Maths.createTransformMatrix(position, rotation, scale);
+        return MathUtils.createTransformMatrix(position, rotation, scale);
     }
 
 }

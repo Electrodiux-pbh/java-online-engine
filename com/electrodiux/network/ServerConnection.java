@@ -3,7 +3,6 @@ package com.electrodiux.network;
 import java.io.IOException;
 import java.net.Socket;
 
-import com.electrodiux.Client;
 import com.electrodiux.network.packet.ClientConnectPacket;
 import com.electrodiux.network.packet.Packet;
 
@@ -16,6 +15,22 @@ public class ServerConnection extends GenericConnection {
         super(socket);
         this.client = client;
         this.username = username;
+    }
+
+    public static ServerConnection createConnection(String ipAddress, Client client, String username)
+            throws IOException {
+        String[] ipParts = ipAddress.split(":");
+        String hostName = ipParts[0];
+        int port = 5000; // Default port is 5000
+        if (ipParts.length > 1) {
+            try {
+                port = Integer.parseInt(ipParts[1]);
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException("Invalid ip format", e);
+            }
+        }
+
+        return new ServerConnection(new Socket(hostName, port), client, username);
     }
 
     @Override
