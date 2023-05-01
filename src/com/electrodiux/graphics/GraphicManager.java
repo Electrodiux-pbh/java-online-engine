@@ -21,6 +21,7 @@ import org.lwjgl.opengl.GL30;
 
 import com.electrodiux.Player;
 import com.electrodiux.World;
+import com.electrodiux.entity.ColliderEntity;
 import com.electrodiux.entity.Entity;
 import com.electrodiux.math.MathUtils;
 import com.electrodiux.math.Vector3;
@@ -83,6 +84,7 @@ public class GraphicManager implements Runnable {
 
     private float cameraDistance = 0.0f;
     public int cameraMode = 0;
+    public int renderMode = 0;
 
     private List<SceneObject> sceneObjects = new ArrayList<SceneObject>();
     private Map<String, Texture> playerTextures = new HashMap<String, Texture>();
@@ -90,6 +92,8 @@ public class GraphicManager implements Runnable {
     private Model playerModel;
     private Model sphereModel, cubeModel;
     private Texture defaultPlayerTexture;
+    // private Light light;
+    private GlobalLight globalLight;
 
     private Chunk chunk;
 
@@ -98,18 +102,33 @@ public class GraphicManager implements Runnable {
         // clear depth buffer and color buffer
         GL11.glEnable(GL11.GL_DEPTH_TEST);
         GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
-        camera.startFrame();
+        camera.clearColor();
 
         camera.setProjectionsToShader(shader);
+        shader.setVector3("lightDirection", globalLight.getLightDirection());
+        shader.setColor("lightColor", Color.WHITE);
 
+        if (DebugDraw.isActive()) {
+            DebugDraw.addLine(Vector3.ZERO, globalLight.getLightDirection(), Color.YELLOW);
+        }
+
+        shader.setBoolean("usingTexture", true);
         for (SceneObject sceneObject : sceneObjects) {
             if (sceneObject != null)
                 renderObject(sceneObject);
         }
 
+        shader.setBoolean("usingTexture", false);
         for (Entity entity : world.getEntitiesArray()) {
             if (DebugDraw.isActive())
                 renderDebugEntity(entity);
+
+            Color color = Color.WHITE;
+            if (entity instanceof ColliderEntity colliderEntity) {
+                color = colliderEntity.getColor();
+            }
+
+            shader.setColor("inColor", color);
 
             Collider collider = entity.getRigidBody().getCollider();
             if (collider instanceof SphereCollider sphere) {
@@ -120,13 +139,24 @@ public class GraphicManager implements Runnable {
 
                 GL30.glBindVertexArray(sphereModel.getVaoId());
 
-                GL20.glEnableVertexAttribArray(0);
-                GL20.glEnableVertexAttribArray(1);
+                enableVertexAttribArrays();
 
-                GL11.glDrawElements(GL11.GL_TRIANGLES, sphereModel.getVertexCount(), GL11.GL_UNSIGNED_INT, 0);
+                GL11.glLineWidth(1.0f);
+                GL11.glPointSize(3f);
+                int mode = GL11.GL_TRIANGLES;
 
-                GL20.glDisableVertexAttribArray(0);
-                GL20.glDisableVertexAttribArray(1);
+                switch (renderMode) {
+                    case 0:
+                        mode = GL11.GL_TRIANGLES;
+                        break;
+                    case 1:
+                        mode = GL11.GL_LINE_STRIP;
+                        break;
+                }
+
+                GL11.glDrawElements(mode, sphereModel.getVertexCount(), GL11.GL_UNSIGNED_INT, 0);
+
+                enableDisableAttribArrays();
             } else if (collider instanceof BoxCollider box) {
                 Matrix4f transformMatrix = MathUtils.createTransformMatrix(entity.position().getAdded(box.getCenter()),
                         entity.rotation(), box.getSize());
@@ -135,21 +165,19 @@ public class GraphicManager implements Runnable {
 
                 GL30.glBindVertexArray(cubeModel.getVaoId());
 
-                GL20.glEnableVertexAttribArray(0);
-                GL20.glEnableVertexAttribArray(1);
+                enableVertexAttribArrays();
 
                 GL11.glDrawElements(GL11.GL_TRIANGLES, cubeModel.getVertexCount(), GL11.GL_UNSIGNED_INT, 0);
 
-                GL20.glDisableVertexAttribArray(0);
-                GL20.glDisableVertexAttribArray(1);
+                enableDisableAttribArrays();
             }
         }
 
         GL30.glBindVertexArray(playerModel.getVaoId());
 
-        GL20.glEnableVertexAttribArray(0);
-        GL20.glEnableVertexAttribArray(1);
+        enableVertexAttribArrays();
 
+        shader.setBoolean("usingTexture", true);
         for (Player player : world.getPlayers()) {
             if (cameraMode == 0 && player == this.player)
                 continue;
@@ -176,13 +204,23 @@ public class GraphicManager implements Runnable {
                 texture.unbind();
         }
 
-        GL20.glDisableVertexAttribArray(0);
-        GL20.glDisableVertexAttribArray(1);
+        enableDisableAttribArrays();
 
         GL30.glBindVertexArray(0);
 
         shader.detach();
-        camera.endFrame();
+    }
+
+    private static void enableVertexAttribArrays() {
+        GL20.glEnableVertexAttribArray(0);
+        GL20.glEnableVertexAttribArray(1);
+        GL20.glEnableVertexAttribArray(2);
+    }
+
+    private static void enableDisableAttribArrays() {
+        GL20.glDisableVertexAttribArray(0);
+        GL20.glDisableVertexAttribArray(1);
+        GL20.glDisableVertexAttribArray(2);
     }
 
     private void renderDebugEntity(Entity entity) {
@@ -216,8 +254,7 @@ public class GraphicManager implements Runnable {
 
         GL30.glBindVertexArray(model.getVaoId());
 
-        GL20.glEnableVertexAttribArray(0);
-        GL20.glEnableVertexAttribArray(1);
+        enableVertexAttribArrays();
 
         GL13.glActiveTexture(GL13.GL_TEXTURE0);
 
@@ -229,8 +266,7 @@ public class GraphicManager implements Runnable {
         if (texture != null)
             texture.unbind();
 
-        GL20.glDisableVertexAttribArray(0);
-        GL20.glDisableVertexAttribArray(1);
+        enableDisableAttribArrays();
 
         GL30.glBindVertexArray(0);
     }
@@ -275,16 +311,21 @@ public class GraphicManager implements Runnable {
         camera = new Camera();
         camera.setBackgroundColor(Color.LIGHT_BLUE);
         camera.setAspectRatio(window.getWidth(), window.getHeight());
+        camera.setzFar(300f);
         cameraDistance = 10f;
+
+        // light = new Light(new Vector3(0, 10, 0), Color.WHITE);
+        globalLight = new GlobalLight(new Vector3(1, -1, 0), Color.WHITE);
 
         Texture texture = null;
         try {
-            shader = Shader.loadShader("/assets/shaders/default.glsl");
+            shader = Shader.loadShader("/assets/shaders/light.glsl");
             texture = Loader.loadTexture("/assets/grass_pixel.jpg", GL11.GL_NEAREST);
             defaultPlayerTexture = Loader.loadTexture("/assets/player.png", GL11.GL_NEAREST);
             playerModel = Loader.loadObjModel("/assets/player.obj");
-            sphereModel = Loader.loadObjModel("/assets/sphere.obj");
             cubeModel = Loader.loadObjModel("/assets/cube.obj");
+
+            sphereModel = generateSphereModel(1, 30, 30);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -340,6 +381,85 @@ public class GraphicManager implements Runnable {
 
         playerTextures.put(username, texture);
         return texture;
+    }
+
+    public static Model generateSphereModel(float radius, int stacks, int sectors) {
+        float[] vertices = generateSphereVertices(radius, stacks, sectors);
+        int[] indices = generateSphereIndices(stacks, sectors);
+        float[] normals = generateSphereNormals(vertices);
+
+        return Loader.loadRawModel(vertices, indices, normals, null);
+    }
+
+    public static float[] generateSphereVertices(float radius, int stacks, int sectors) {
+        float[] vertices = new float[(stacks + 1) * (sectors + 1) * 3];
+        float pi = (float) Math.PI;
+        float pi2 = 2 * pi;
+        float sectorStep = pi2 / sectors;
+        float stackStep = pi / stacks;
+        int index = 0;
+        for (int i = 0; i <= stacks; i++) {
+            float stackAngle = pi / 2 - i * stackStep;
+            float xz = (float) (radius * Math.cos(stackAngle));
+            float y = (float) (radius * Math.sin(stackAngle));
+            for (int j = 0; j <= sectors; j++) {
+                float sectorAngle = j * sectorStep;
+                float x = (float) (xz * Math.cos(sectorAngle));
+                float z = (float) (xz * Math.sin(sectorAngle));
+                vertices[index++] = x;
+                vertices[index++] = y;
+                vertices[index++] = z;
+            }
+        }
+        return vertices;
+    }
+
+    public static int[] generateSphereIndices(int stacks, int sectors) {
+        int[] indices = new int[stacks * sectors * 6];
+        int index = 0;
+        for (int i = 0; i < stacks; i++) {
+            for (int j = 0; j < sectors; j++) {
+                int k1 = i * (sectors + 1) + j;
+                int k2 = k1 + 1;
+                int k3 = (i + 1) * (sectors + 1) + j;
+                int k4 = k3 + 1;
+                indices[index++] = k1;
+                indices[index++] = k2;
+                indices[index++] = k3;
+                indices[index++] = k2;
+                indices[index++] = k4;
+                indices[index++] = k3;
+            }
+        }
+        return indices;
+    }
+
+    public static float[] generateSphereNormals(float[] vertices) {
+        float[] normals = new float[vertices.length];
+        for (int i = 0; i < vertices.length; i += 3) {
+            float x = vertices[i];
+            float y = vertices[i + 1];
+            float z = vertices[i + 2];
+            float length = (float) Math.sqrt(x * x + y * y + z * z);
+            normals[i] = x / length;
+            normals[i + 1] = y / length;
+            normals[i + 2] = z / length;
+        }
+        return normals;
+    }
+
+    public static float[] generateSphereTextureCoords(int stacks, int sectors) {
+        float[] textureCoords = new float[(stacks + 1) * (sectors + 1) * 2];
+        int index = 0;
+        for (int i = 0; i <= stacks; i++) {
+            float stackRatio = (float) i / stacks;
+            for (int j = 0; j <= sectors; j++) {
+                float sectorRatio = (float) j / sectors;
+                textureCoords[index++] = sectorRatio;
+                textureCoords[index++] = stackRatio;
+            }
+        }
+        return textureCoords;
     }
 
 }

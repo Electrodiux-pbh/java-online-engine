@@ -1,6 +1,7 @@
 package com.electrodiux.graphics;
 
 import java.io.Serializable;
+import java.util.Random;
 
 import com.electrodiux.math.MathUtils;
 
@@ -34,6 +35,13 @@ public class Color implements Serializable {
 		this.green = green;
 		this.blue = blue;
 		this.alpha = alpha;
+	}
+
+	public Color(Color other) {
+		this.red = other.red;
+		this.green = other.green;
+		this.blue = other.blue;
+		this.alpha = other.alpha;
 	}
 
 	public Color(float[] values) {
@@ -79,6 +87,11 @@ public class Color implements Serializable {
 				MathUtils.lerp(a.alpha, b.alpha, t));
 
 		return c;
+	}
+
+	public static Color randomColor() {
+		Random random = new Random();
+		return new Color(random.nextFloat(), random.nextFloat(), random.nextFloat(), 1.0f);
 	}
 
 }

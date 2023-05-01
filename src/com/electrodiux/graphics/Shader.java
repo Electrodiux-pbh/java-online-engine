@@ -15,6 +15,9 @@ import org.joml.Vector4f;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.opengl.GL20;
 
+import com.electrodiux.math.Vector2;
+import com.electrodiux.math.Vector3;
+
 public class Shader {
 
     private String filePath;
@@ -176,10 +179,22 @@ public class Shader {
         GL20.glUniform3f(varLocation, vec.x, vec.y, vec.z);
     }
 
+    public void setVector3(String varName, Vector3 vec) {
+        int varLocation = GL20.glGetUniformLocation(shaderProgram, varName);
+        use();
+        GL20.glUniform3f(varLocation, vec.x(), vec.y(), vec.z());
+    }
+
     public void setVector2f(String varName, Vector2f vec) {
         int varLocation = GL20.glGetUniformLocation(shaderProgram, varName);
         use();
         GL20.glUniform2f(varLocation, vec.x, vec.y);
+    }
+
+    public void setVector2(String varName, Vector2 vec) {
+        int varLocation = GL20.glGetUniformLocation(shaderProgram, varName);
+        use();
+        GL20.glUniform2f(varLocation, vec.x(), vec.y());
     }
 
     public void setFloat(String varName, float value) {

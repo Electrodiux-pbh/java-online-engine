@@ -1,6 +1,7 @@
 package com.electrodiux.graphics;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -36,11 +37,33 @@ public class Loader {
         int vaoId = GL30.glGenVertexArrays();
         GL30.glBindVertexArray(vaoId);
 
+        if (textureCoords == null) {
+            textureCoords = new float[indices.length * 2];
+        }
+
         loadIndices(indices);
         storeDataInAttributeList(0, vertices, 3);
-        if (textureCoords != null) {
-            storeDataInAttributeList(1, textureCoords, 2);
+        storeDataInAttributeList(1, textureCoords, 2);
+
+        GL30.glBindVertexArray(0);
+
+        attributeLists.add(vaoId);
+
+        return new Model(vaoId, indices.length);
+    }
+
+    public static Model loadRawModel(float[] vertices, int[] indices, float[] normals, float[] textureCoords) {
+        int vaoId = GL30.glGenVertexArrays();
+        GL30.glBindVertexArray(vaoId);
+
+        if (textureCoords == null) {
+            textureCoords = new float[indices.length * 2];
         }
+
+        loadIndices(indices);
+        storeDataInAttributeList(0, vertices, 3);
+        storeDataInAttributeList(1, textureCoords, 2);
+        storeDataInAttributeList(2, normals, 3);
 
         GL30.glBindVertexArray(0);
 
@@ -74,8 +97,8 @@ public class Loader {
         buffers.add(eboId);
     }
 
-    public static Model loadFileObjModel(String fileName) throws IOException {
-        return loadObjModel(new FileInputStream(fileName));
+    public static Model loadObjModel(File file) throws IOException {
+        return loadObjModel(new FileInputStream(file));
     }
 
     public static Model loadObjModel(String path) throws IOException {
@@ -151,7 +174,7 @@ public class Loader {
                 indicesBuffer[i] = indices.get(i);
             }
 
-            return Loader.loadRawModel(vertexBuffer, indicesBuffer, textureBuffer);
+            return Loader.loadRawModel(vertexBuffer, indicesBuffer, normalBuffer, textureBuffer);
         } catch (IOException e) {
             throw new IOException("An error occurred while loading the model", e);
         } catch (Exception e) {

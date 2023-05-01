@@ -45,6 +45,16 @@ public class ClientBehaviour {
             }
         }
 
+        if (Keyboard.isKeyTyped(GLFW.GLFW_KEY_F2)) {
+            switch (graphicManager.renderMode) {
+                case 0:
+                    graphicManager.renderMode++;
+                    break;
+                default:
+                    graphicManager.renderMode = 0;
+            }
+        }
+
         if (Keyboard.isKeyTyped(GLFW.GLFW_KEY_F1)) {
             DebugDraw.setActive(!DebugDraw.isActive());
         }

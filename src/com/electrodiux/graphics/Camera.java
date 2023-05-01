@@ -1,7 +1,6 @@
 package com.electrodiux.graphics;
 
 import org.joml.Matrix4f;
-import org.joml.Vector2f;
 import org.joml.Vector3f;
 import org.lwjgl.opengl.GL11;
 
@@ -15,19 +14,16 @@ public class Camera {
 	public static final float NEAR_PLANE = 0.1F;
 	public static final float FAR_PLANE = 100;
 
-	protected transient Matrix4f projectionMatrix, viewMatrix;
-	protected Vector3 position;
-	protected Vector3 rotation;
-	protected boolean isOrtho = false;
+	private transient Matrix4f projectionMatrix, viewMatrix;
+	private Vector3 position;
+	private Vector3 rotation;
 
-	protected float aspectRatio;
-	protected float zFar;
-	protected float zNear;
-	protected float fov;
+	private float aspectRatio;
+	private float zFar;
+	private float zNear;
+	private float fov;
 
-	protected Color bg;
-
-	protected transient Vector2f projectionSize = new Vector2f(6, 3);
+	private Color bg;
 
 	public Camera() {
 		this(16f / 9f);
@@ -35,14 +31,6 @@ public class Camera {
 
 	public Camera(float aspectRatio) {
 		this(FOV, aspectRatio, NEAR_PLANE, FAR_PLANE);
-	}
-
-	public Camera(float aspectRatio, boolean isOrtho) {
-		this(FOV, aspectRatio, NEAR_PLANE, FAR_PLANE);
-		this.isOrtho = isOrtho;
-		if (isOrtho) {
-			makeProjection();
-		}
 	}
 
 	public Camera(float fov, float aspectRatio, float nearPlane, float farPlane) {
@@ -58,7 +46,7 @@ public class Camera {
 		this.zNear = nearPlane;
 		this.zFar = farPlane;
 
-		this.bg = Color.WHITE;
+		this.bg = new Color(Color.WHITE);
 
 		this.viewMatrix = new Matrix4f();
 		makeProjection();
@@ -66,12 +54,7 @@ public class Camera {
 
 	public void makeProjection() {
 		projectionMatrix = new Matrix4f();
-		if (isOrtho()) {
-			projectionMatrix.identity();
-			projectionMatrix.ortho(0, projectionSize.x, 0, projectionSize.y, 0, 100);
-		} else {
-			projectionMatrix.perspective(fov, aspectRatio, zNear, zFar);
-		}
+		projectionMatrix.perspective(fov, aspectRatio, zNear, zFar);
 	}
 
 	public Matrix4f getViewMatrix() {
@@ -87,17 +70,8 @@ public class Camera {
 		return this.viewMatrix;
 	}
 
-	public void startFrame() {
+	public void clearColor() {
 		GL11.glClearColor(bg.r(), bg.g(), bg.b(), bg.a());
-		// if (framebuffer != null) {
-		// framebuffer.bind();
-		// }
-	}
-
-	public void endFrame() {
-		// if (framebuffer != null) {
-		// framebuffer.destroy();
-		// }
 	}
 
 	public void setProjectionsToShader(Shader shader) {
@@ -117,25 +91,12 @@ public class Camera {
 		return rotation;
 	}
 
-	public boolean isOrtho() {
-		return isOrtho;
-	}
-
-	public void setBackgroundColor(Color white) {
-		bg.set(white);
+	public void setBackgroundColor(Color bg) {
+		this.bg = bg;
 	}
 
 	public Color getBackgroundColor() {
 		return bg;
-	}
-
-	public void setOrtho(boolean isOrtho) {
-		if (this.isOrtho != isOrtho) {
-			this.isOrtho = isOrtho;
-			makeProjection();
-		} else {
-			this.isOrtho = isOrtho;
-		}
 	}
 
 	public float getAspectRatio() {
@@ -158,8 +119,6 @@ public class Camera {
 		if (this.zFar != farPlane) {
 			this.zFar = farPlane;
 			makeProjection();
-		} else {
-			this.zFar = farPlane;
 		}
 	}
 
@@ -171,8 +130,6 @@ public class Camera {
 		if (this.zNear != nearPlane) {
 			this.zNear = nearPlane;
 			makeProjection();
-		} else {
-			this.zNear = nearPlane;
 		}
 	}
 
@@ -184,8 +141,6 @@ public class Camera {
 		if (this.fov != fov) {
 			this.fov = fov;
 			makeProjection();
-		} else {
-			this.fov = fov;
 		}
 	}
 

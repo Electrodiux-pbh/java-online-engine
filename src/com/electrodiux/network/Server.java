@@ -6,18 +6,14 @@ import java.net.Socket;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.UUID;
 
 import com.electrodiux.Player;
 import com.electrodiux.World;
 import com.electrodiux.WorldUpdater;
-import com.electrodiux.entity.ColliderEntity;
-import com.electrodiux.math.Vector3;
 import com.electrodiux.network.packet.ClientConnectPacket;
 import com.electrodiux.network.packet.CompressedPacket;
 import com.electrodiux.network.packet.EventPacket;
 import com.electrodiux.network.packet.Packet;
-import com.electrodiux.physics.SphereCollider;
 
 public class Server extends WorldUpdater {
 
@@ -31,12 +27,6 @@ public class Server extends WorldUpdater {
 
     public void start(World world) {
         this.world = world;
-
-        ColliderEntity ball1 = new ColliderEntity(UUID.randomUUID(), new Vector3(15, 5f, 15), new SphereCollider(5f));
-        ball1.getRigidBody().mass(40f);
-        ball1.getRigidBody().setKinematic(false);
-        world.addEntity(ball1);
-
         super.start();
     }
 

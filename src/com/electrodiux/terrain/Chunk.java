@@ -69,7 +69,7 @@ public class Chunk {
             }
         }
 
-        Model model = Loader.loadRawModel(vertices, indices, textureCoords);
+        Model model = Loader.loadRawModel(vertices, indices, normals, textureCoords);
         return model;
     }
 
