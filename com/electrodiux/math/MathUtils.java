@@ -2,9 +2,9 @@ package com.electrodiux.math;
 
 import org.joml.Matrix4f;
 
-public final class Maths {
+public final class MathUtils {
 
-    private Maths() {
+    private MathUtils() {
     }
 
     public static float clamp(float min, float value, float max) {

@@ -14,4 +14,13 @@ public class EventPacket extends Packet {
     public Event[] getEvents() {
         return events;
     }
+
+    public void setSourceToEvents(Object source) {
+        for (int i = 0; i < events.length; i++) {
+            Event e = events[i];
+            if (e != null) {
+                e.setSource(source);
+            }
+        }
+    }
 }

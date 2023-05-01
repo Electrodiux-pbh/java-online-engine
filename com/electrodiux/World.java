@@ -16,7 +16,7 @@ import com.electrodiux.event.MoveEvent;
 import com.electrodiux.event.PlayerConnectionEvent;
 import com.electrodiux.event.PositionEvent;
 import com.electrodiux.event.SpawnEntityEvent;
-import com.electrodiux.math.Maths;
+import com.electrodiux.math.MathUtils;
 import com.electrodiux.math.Vector3;
 import com.electrodiux.physics.ForceMode;
 import com.electrodiux.physics.PhysicsSystem;
@@ -112,7 +112,7 @@ public class World {
                     ForceMode.ACCELERATION);
 
             Vector3 rotation = event.getRotationVector();
-            rotation.x(Maths.clamp((float) Math.PI / -2f, rotation.x(), (float) Math.PI / 2f));
+            rotation.x(MathUtils.clamp((float) Math.PI / -2f, rotation.x(), (float) Math.PI / 2f));
 
             player.rotation().set(rotation);
 

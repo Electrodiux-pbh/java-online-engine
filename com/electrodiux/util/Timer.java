@@ -5,6 +5,7 @@ public class Timer {
     private static int lastTimerId = 1;
 
     private float fpsValue = 0;
+    private float fpsGoal = 0;
     private short timerFps = 0;
 
     private boolean running = false;
@@ -134,6 +135,7 @@ public class Timer {
         if (fps <= 0)
             return;
         fpsValue = 1000F / fps;
+        fpsGoal = fps;
     }
 
     /**
@@ -163,6 +165,10 @@ public class Timer {
      */
     public float getDeltaTime() {
         return deltaTime;
+    }
+
+    public float getFixedDeltaTime() {
+        return 1f / fpsGoal;
     }
 
     /**

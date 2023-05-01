@@ -1,6 +1,6 @@
 package com.electrodiux.physics;
 
-import com.electrodiux.math.Maths;
+import com.electrodiux.math.MathUtils;
 import com.electrodiux.math.Vector3;
 
 public class BoxCollider extends Collider {
@@ -63,9 +63,9 @@ public class BoxCollider extends Collider {
 
         // Calculate the closest point on the box's surface to the center of the sphere
         Vector3 closestPoint = new Vector3(
-                Maths.clamp(sphereMassCenter.x, boxCollider.getMin().x, boxCollider.getMax().x),
-                Maths.clamp(sphereMassCenter.y, boxCollider.getMin().y, boxCollider.getMax().y),
-                Maths.clamp(sphereMassCenter.z, boxCollider.getMin().z, boxCollider.getMax().z));
+                MathUtils.clamp(sphereMassCenter.x, boxCollider.getMin().x, boxCollider.getMax().x),
+                MathUtils.clamp(sphereMassCenter.y, boxCollider.getMin().y, boxCollider.getMax().y),
+                MathUtils.clamp(sphereMassCenter.z, boxCollider.getMin().z, boxCollider.getMax().z));
 
         // Calculate the vector from the closest point on the box's surface to the
         // center of the sphere

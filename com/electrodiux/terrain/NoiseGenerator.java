@@ -1,4 +1,4 @@
-package com.electrodiux;
+package com.electrodiux.terrain;
 
 import java.util.Random;
 

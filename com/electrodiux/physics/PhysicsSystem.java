@@ -137,6 +137,34 @@ public final class PhysicsSystem {
         // #endregion
     }
 
+    public static Vector3 getTranslationVectors(Vector3 mdt, Vector3 mainPolyCenterPt, Vector3 otherPolyCenterPt,
+            Vector3 mainPolyVelocity, Vector3 otherPolyVelocity) {
+
+        if (mainPolyVelocity.x() == 0 && mainPolyVelocity.y() == 0 && mainPolyVelocity.z() == 0)
+            return new Vector3(0, 0, 0);
+
+        Vector3 translationVector = new Vector3(mdt);
+
+        Vector3 displacementBetweenPolygons = mainPolyCenterPt.getSubstract(otherPolyCenterPt);
+
+        if (displacementBetweenPolygons.dot(mdt) < 0) {
+            translationVector.inverseSign();
+        }
+
+        float curLength = translationVector.magnitude();
+        float lengthOfMainVelocity = mainPolyVelocity.magnitude();
+        float lengthOfOtherVelocity = otherPolyVelocity.magnitude();
+        float newLength = curLength * (lengthOfMainVelocity / (lengthOfMainVelocity + lengthOfOtherVelocity));
+
+        translationVector.magnitude(newLength);
+
+        if (Float.isNaN(translationVector.x()) && Float.isNaN(translationVector.y())
+                && Float.isNaN(translationVector.z()))
+            translationVector.set(0, 0, 0);
+
+        return translationVector;
+    }
+
     public synchronized void addRigidBody(RigidBody body) {
         this.rigidBodies.add(body);
     }

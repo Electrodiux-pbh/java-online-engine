@@ -1,62 +1,69 @@
-package com.electrodiux;
+package com.electrodiux.network;
 
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.UUID;
 
+import com.electrodiux.Player;
+import com.electrodiux.World;
+import com.electrodiux.WorldUpdater;
 import com.electrodiux.entity.ColliderEntity;
-import com.electrodiux.event.Event;
 import com.electrodiux.math.Vector3;
-import com.electrodiux.network.ClientHandler;
-import com.electrodiux.network.OnlineClientHandler;
 import com.electrodiux.network.packet.ClientConnectPacket;
 import com.electrodiux.network.packet.CompressedPacket;
 import com.electrodiux.network.packet.EventPacket;
 import com.electrodiux.network.packet.Packet;
-import com.electrodiux.physics.BoxCollider;
 import com.electrodiux.physics.SphereCollider;
-import com.electrodiux.util.Timer;
 
-public class Server {
+public class Server extends WorldUpdater {
+
+    public static final int DEFAULT_SERVER_BACKLOG = 50;
 
     private ServerSocket serverSocket;
     private Thread serverSocketThread;
+    private boolean isServerConnected = false;
 
     private Collection<ClientHandler> clients = new HashSet<>();
-    private Collection<Event> packets = new ArrayList<>();
 
-    private World world;
+    public void start(World world) {
+        this.world = world;
 
-    private Timer timer;
+        ColliderEntity ball1 = new ColliderEntity(UUID.randomUUID(), new Vector3(15, 5f, 15), new SphereCollider(5f));
+        ball1.getRigidBody().mass(40f);
+        ball1.getRigidBody().setKinematic(false);
+        world.addEntity(ball1);
 
-    public void start() {
-        world = new World(true);
-
-        ColliderEntity ball = new ColliderEntity(UUID.randomUUID(), new Vector3(15, 5, 15), new SphereCollider(5f));
-        ball.getRigidBody().mass(40f);
-        ball.getRigidBody().setKinematic(false);
-        world.addEntity(ball);
-
-        ColliderEntity box = new ColliderEntity(UUID.randomUUID(), new Vector3(-15, 2, 0),
-                new BoxCollider(new Vector3(), new Vector3(2, 4, 5)));
-        box.getRigidBody().mass(20f);
-        world.addEntity(box);
-
-        timer = new Timer(20);
-        timer.setHandler(this::update);
-        timer.start();
+        super.start();
     }
 
-    public void openServerSocket() throws IOException {
-        serverSocket = new ServerSocket(5000);
-        System.out.println("Server started on port 5000");
+    public int openServerSocket(int port) throws IOException {
+        return openServerSocket(port, DEFAULT_SERVER_BACKLOG);
+    }
+
+    /**
+     * @return the port that is connected to
+     * 
+     * @see java.net.ServerSocket.ServerSocket
+     */
+    public int openServerSocket(int port, int backlog) throws IOException {
+        if (isServerConnected()) {
+            throw new IllegalStateException("Cannot open server socket because it's already opened");
+        }
+
+        serverSocket = new ServerSocket(port, backlog);
+
+        port = serverSocket.getLocalPort();
+
+        System.out.println("Server started on port " + port);
         serverSocketThread = new Thread(this::runServerSocket, "Server Socket Fetching");
         serverSocketThread.start();
+        isServerConnected = true;
+
+        return port;
     }
 
     private void runServerSocket() {
@@ -64,7 +71,7 @@ public class Server {
             while (Thread.currentThread().isAlive()) {
                 Socket socket = serverSocket.accept();
 
-                OnlineClientHandler clientHandler = new OnlineClientHandler(this, socket);
+                ClientHandler clientHandler = new ClientHandler(this, socket);
                 registerClientHandler(clientHandler);
             }
         } catch (IOException e) {
@@ -80,21 +87,7 @@ public class Server {
         }
     }
 
-    private synchronized void updatePackets() {
-        world.getEventsQueue().addAll(packets);
-        packets.clear();
-    }
-
-    private void update() {
-        // Update Time
-        Time.updateTime();
-        Time.setDeltaTime(timer.getDeltaTime());
-        Time.setFixedDeltaTime(timer.getDeltaTime());
-
-        updatePackets();
-
-        world.update(timer.getDeltaTime());
-
+    protected synchronized void updatePackets() {
         EventPacket globalEventPacket = null;
         if (world.getProcesedEventsQueue().size() > 0) {
             globalEventPacket = new EventPacket(world.getProcesedEventsQueue().toEventArray());
@@ -104,21 +97,12 @@ public class Server {
             if (globalEventPacket != null) {
                 clientHandler.sendPacket(globalEventPacket);
             }
-
-            Player player = clientHandler.getPlayer();
-
-            if (player != null) {
-                EventPacket eventPacket = new EventPacket(player.clearEvents());
-                clientHandler.sendPacket(eventPacket);
-            }
         }
 
-        world.getProcesedEventsQueue().clear();
-
         dispatchPackets();
+    }
 
-        // Update Time
-        Time.increaseUpdateCount();
+    protected void update() {
     }
 
     public void registerClientHandler(ClientHandler clientHandler) {
@@ -131,7 +115,7 @@ public class Server {
         System.out.println("Client connected from " + clientHandler.getConnectionOrigin());
     }
 
-    public void unregisterClientHandler(OnlineClientHandler clientHandler) {
+    public void unregisterClientHandler(ClientHandler clientHandler) {
         this.clients.remove(clientHandler);
         world.removePlayer(clientHandler.getPlayer());
     }
@@ -178,16 +162,8 @@ public class Server {
     }
 
     private synchronized void registerEventPacket(EventPacket packet, Player source) {
-        Event[] events = packet.getEvents();
-
-        for (int i = 0; i < events.length; i++) {
-            Event e = events[i];
-            if (e != null) {
-                e.setSource(source);
-            }
-        }
-
-        packets.addAll(Arrays.asList(events));
+        packet.setSourceToEvents(source);
+        this.events.addAll(Arrays.asList(packet.getEvents()));
     }
 
     public ClientConnectPacket handleClientConnect(ClientHandler clientHandler, ClientConnectPacket packet) {
@@ -202,6 +178,10 @@ public class Server {
                 getWorld().getPlayersArray(), getWorld().getEntitiesWithoutPlayers());
 
         return responsePacket;
+    }
+
+    public boolean isServerConnected() {
+        return isServerConnected;
     }
 
     // #endregion
