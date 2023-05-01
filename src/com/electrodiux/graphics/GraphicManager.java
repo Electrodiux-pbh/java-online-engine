@@ -6,12 +6,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import org.joml.Matrix4f;
+import org.joml.Vector3f;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.opengl.GL;
 import org.lwjgl.opengl.GL11;
@@ -23,12 +22,11 @@ import com.electrodiux.Player;
 import com.electrodiux.World;
 import com.electrodiux.entity.ColliderEntity;
 import com.electrodiux.entity.Entity;
+import com.electrodiux.graphics.lightning.GlobalLight;
 import com.electrodiux.math.MathUtils;
 import com.electrodiux.math.Vector3;
-import com.electrodiux.physics.BoxCollider;
 import com.electrodiux.physics.Collider;
 import com.electrodiux.physics.SphereCollider;
-import com.electrodiux.terrain.Chunk;
 
 public class GraphicManager implements Runnable {
 
@@ -69,7 +67,6 @@ public class GraphicManager implements Runnable {
             GLFW.glfwPollEvents();
             update(deltaTime);
             render();
-            DebugDraw.render(camera);
 
             // swapbuffers
             GLFW.glfwSwapBuffers(window.getWindowID());
@@ -86,19 +83,70 @@ public class GraphicManager implements Runnable {
     public int cameraMode = 0;
     public int renderMode = 0;
 
-    private List<SceneObject> sceneObjects = new ArrayList<SceneObject>();
     private Map<String, Texture> playerTextures = new HashMap<String, Texture>();
 
+    private Model sphereModel;
+
     private Model playerModel;
-    private Model sphereModel, cubeModel;
     private Texture defaultPlayerTexture;
-    // private Light light;
+
     private GlobalLight globalLight;
 
-    private Chunk chunk;
+    private Model chunkModel;
+    private Texture chunkTexture;
 
     private void render() {
+        prepareRender();
 
+        if (DebugDraw.isActive()) {
+            DebugDraw.addLine(Vector3.ZERO, globalLight.getLightDirection(), Color.YELLOW);
+        }
+
+        renderEntitiesColliders();
+
+        shader.setBoolean("usingTexture", true);
+        renderObject(chunkModel, chunkTexture, new Matrix4f());
+
+        GL30.glBindVertexArray(playerModel.getVaoId());
+
+        enableVertexAttribArrays();
+
+        shader.setBoolean("usingTexture", true);
+        for (Player player : world.getPlayers()) {
+            if (cameraMode == 0 && player == this.player)
+                continue;
+
+            Texture texture = getPlayerTexture(player.getName());
+
+            if (texture == null)
+                texture = defaultPlayerTexture;
+
+            Matrix4f transformMatrix = MathUtils.createTransformMatrix(player.position(),
+                    new Vector3(0, -player.rotation().y(), 0), Vector3.ONE);
+
+            shader.setMatrix4f("transformMatrix", transformMatrix);
+
+            GL13.glActiveTexture(GL13.GL_TEXTURE0);
+
+            if (texture != null)
+                texture.bind();
+
+            GL11.glDrawElements(GL11.GL_TRIANGLES, playerModel.getVertexCount(), GL11.GL_UNSIGNED_INT, 0);
+
+            if (texture != null)
+                texture.unbind();
+        }
+
+        enableDisableAttribArrays();
+
+        GL30.glBindVertexArray(0);
+
+        shader.detach();
+
+        DebugDraw.render(camera);
+    }
+
+    private void prepareRender() {
         // clear depth buffer and color buffer
         GL11.glEnable(GL11.GL_DEPTH_TEST);
         GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
@@ -107,17 +155,9 @@ public class GraphicManager implements Runnable {
         camera.setProjectionsToShader(shader);
         shader.setVector3("lightDirection", globalLight.getLightDirection());
         shader.setColor("lightColor", Color.WHITE);
+    }
 
-        if (DebugDraw.isActive()) {
-            DebugDraw.addLine(Vector3.ZERO, globalLight.getLightDirection(), Color.YELLOW);
-        }
-
-        shader.setBoolean("usingTexture", true);
-        for (SceneObject sceneObject : sceneObjects) {
-            if (sceneObject != null)
-                renderObject(sceneObject);
-        }
-
+    private void renderEntitiesColliders() {
         shader.setBoolean("usingTexture", false);
         for (Entity entity : world.getEntitiesArray()) {
             if (DebugDraw.isActive())
@@ -157,67 +197,33 @@ public class GraphicManager implements Runnable {
                 GL11.glDrawElements(mode, sphereModel.getVertexCount(), GL11.GL_UNSIGNED_INT, 0);
 
                 enableDisableAttribArrays();
-            } else if (collider instanceof BoxCollider box) {
-                Matrix4f transformMatrix = MathUtils.createTransformMatrix(entity.position().getAdded(box.getCenter()),
-                        entity.rotation(), box.getSize());
-
-                shader.setMatrix4f("transformMatrix", transformMatrix);
-
-                GL30.glBindVertexArray(cubeModel.getVaoId());
-
-                enableVertexAttribArrays();
-
-                GL11.glDrawElements(GL11.GL_TRIANGLES, cubeModel.getVertexCount(), GL11.GL_UNSIGNED_INT, 0);
-
-                enableDisableAttribArrays();
             }
+            // else if (collider instanceof BoxCollider box) {
+            // Matrix4f transformMatrix =
+            // MathUtils.createTransformMatrix(entity.position().getAdded(box.getCenter()),
+            // entity.rotation(), box.getSize());
+
+            // shader.setMatrix4f("transformMatrix", transformMatrix);
+
+            // GL30.glBindVertexArray(cubeModel.getVaoId());
+
+            // enableVertexAttribArrays();
+
+            // GL11.glDrawElements(GL11.GL_TRIANGLES, cubeModel.getVertexCount(),
+            // GL11.GL_UNSIGNED_INT, 0);
+
+            // enableDisableAttribArrays();
+            // }
         }
-
-        GL30.glBindVertexArray(playerModel.getVaoId());
-
-        enableVertexAttribArrays();
-
-        shader.setBoolean("usingTexture", true);
-        for (Player player : world.getPlayers()) {
-            if (cameraMode == 0 && player == this.player)
-                continue;
-
-            Texture texture = getPlayerTexture(player.getName());
-
-            if (texture == null)
-                texture = defaultPlayerTexture;
-            // Texture texture = defaultPlayerTexture;
-
-            Matrix4f transformMatrix = MathUtils.createTransformMatrix(player.position(),
-                    new Vector3(0, -player.rotation().y(), 0), Vector3.ONE);
-
-            shader.setMatrix4f("transformMatrix", transformMatrix);
-
-            GL13.glActiveTexture(GL13.GL_TEXTURE0);
-
-            if (texture != null)
-                texture.bind();
-
-            GL11.glDrawElements(GL11.GL_TRIANGLES, playerModel.getVertexCount(), GL11.GL_UNSIGNED_INT, 0);
-
-            if (texture != null)
-                texture.unbind();
-        }
-
-        enableDisableAttribArrays();
-
-        GL30.glBindVertexArray(0);
-
-        shader.detach();
     }
 
-    private static void enableVertexAttribArrays() {
+    private void enableVertexAttribArrays() {
         GL20.glEnableVertexAttribArray(0);
         GL20.glEnableVertexAttribArray(1);
         GL20.glEnableVertexAttribArray(2);
     }
 
-    private static void enableDisableAttribArrays() {
+    private void enableDisableAttribArrays() {
         GL20.glDisableVertexAttribArray(0);
         GL20.glDisableVertexAttribArray(1);
         GL20.glDisableVertexAttribArray(2);
@@ -243,10 +249,6 @@ public class GraphicManager implements Runnable {
 
             DebugDraw.addAABB(collider.getBoundingBox(), color, 0.001f);
         }
-    }
-
-    private void renderObject(SceneObject object) {
-        renderObject(object.getModel(), object.getTexture(), object.getTransformationMatrix());
     }
 
     private void renderObject(Model model, Texture texture, Matrix4f transformMatrix) {
@@ -315,27 +317,22 @@ public class GraphicManager implements Runnable {
         cameraDistance = 10f;
 
         // light = new Light(new Vector3(0, 10, 0), Color.WHITE);
-        globalLight = new GlobalLight(new Vector3(1, -1, 0), Color.WHITE);
+        globalLight = new GlobalLight(new Vector3(1, -2, 0.5f), Color.WHITE);
 
-        Texture texture = null;
         try {
             shader = Shader.loadShader("/assets/shaders/light.glsl");
-            texture = Loader.loadTexture("/assets/grass_pixel.jpg", GL11.GL_NEAREST);
+
+            chunkTexture = Loader.loadTexture("/assets/grass.jpg", GL11.GL_NEAREST);
+
             defaultPlayerTexture = Loader.loadTexture("/assets/player.png", GL11.GL_NEAREST);
             playerModel = Loader.loadObjModel("/assets/player.obj");
-            cubeModel = Loader.loadObjModel("/assets/cube.obj");
 
             sphereModel = generateSphereModel(1, 30, 30);
         } catch (IOException e) {
             e.printStackTrace();
         }
-        chunk = new Chunk(0, 0, texture);
 
-        Model chunkModel = chunk.generateTerrain(new float[Chunk.CHUNK_SIZE * Chunk.CHUNK_SIZE]);
-
-        SceneObject floor = new SceneObject(chunkModel, texture);
-        floor.position().set(0, 0, 0);
-        sceneObjects.add(floor);
+        chunkModel = generateTerrain(new float[CHUNK_SIZE * CHUNK_SIZE]);
     }
 
     private Texture getPlayerTexture(String username) {
@@ -382,6 +379,8 @@ public class GraphicManager implements Runnable {
         playerTextures.put(username, texture);
         return texture;
     }
+
+    // #region Basic Shapes Generation
 
     public static Model generateSphereModel(float radius, int stacks, int sectors) {
         float[] vertices = generateSphereVertices(radius, stacks, sectors);
@@ -461,5 +460,65 @@ public class GraphicManager implements Runnable {
         }
         return textureCoords;
     }
+
+    public static final float TILE_SIZE = 2f;
+    public static final int CHUNK_SIZE = 16;
+
+    public Model generateTerrain(float[] heights) {
+        final int count = CHUNK_SIZE * CHUNK_SIZE;
+
+        float[] vertices = new float[count * 3];
+        float[] normals = new float[count * 3];
+        float[] textureCoords = new float[count * 2];
+
+        int[] indices = new int[6 * (CHUNK_SIZE - 1) * (CHUNK_SIZE - 1)]; // 6 indices per square
+
+        int vertexPointer = 0;
+        for (int i = 0; i < CHUNK_SIZE; i++) {
+            for (int j = 0; j < CHUNK_SIZE; j++) {
+                vertices[vertexPointer * 3] = j * TILE_SIZE;
+                vertices[vertexPointer * 3 + 1] = heights[j + i * CHUNK_SIZE]; // use height value from heights array
+                vertices[vertexPointer * 3 + 2] = i * TILE_SIZE;
+
+                // calculate normals using neighboring height values
+                float heightL = j == 0 ? heights[j + i * CHUNK_SIZE] : heights[(j - 1) + i * CHUNK_SIZE];
+                float heightR = j == CHUNK_SIZE - 1 ? heights[j + i * CHUNK_SIZE] : heights[(j + 1) + i * CHUNK_SIZE];
+                float heightD = i == 0 ? heights[j + i * CHUNK_SIZE] : heights[j + (i - 1) * CHUNK_SIZE];
+                float heightU = i == CHUNK_SIZE - 1 ? heights[j + i * CHUNK_SIZE] : heights[j + (i + 1) * CHUNK_SIZE];
+                Vector3f normal = new Vector3f(heightL - heightR, 2f, heightD - heightU).normalize();
+
+                normals[vertexPointer * 3] = normal.x;
+                normals[vertexPointer * 3 + 1] = normal.y;
+                normals[vertexPointer * 3 + 2] = normal.z;
+
+                textureCoords[vertexPointer * 2] = j;
+                textureCoords[vertexPointer * 2 + 1] = i;
+
+                vertexPointer++;
+            }
+        }
+
+        int pointer = 0;
+        for (int gz = 0; gz < CHUNK_SIZE - 1; gz++) {
+            for (int gx = 0; gx < CHUNK_SIZE - 1; gx++) {
+                int topLeft = (gz * CHUNK_SIZE) + gx;
+                int topRight = topLeft + 1;
+                int bottomLeft = ((gz + 1) * CHUNK_SIZE) + gx;
+                int bottomRight = bottomLeft + 1;
+
+                indices[pointer++] = topLeft;
+                indices[pointer++] = bottomLeft;
+                indices[pointer++] = topRight;
+                indices[pointer++] = topRight;
+                indices[pointer++] = bottomLeft;
+                indices[pointer++] = bottomRight;
+            }
+        }
+
+        Model model = Loader.loadRawModel(vertices, indices, normals, textureCoords);
+        return model;
+    }
+
+    // #endregion
 
 }

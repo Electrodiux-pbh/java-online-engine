@@ -34,7 +34,7 @@ import com.electrodiux.physics.AABB;
 public class DebugDraw {
 
     private static final int MAX_LINES = 1024;
-    private static final int MAX_POINTS = 300;
+    private static final int MAX_POINTS = 1024;
 
     private static boolean loaded = false;
     private static boolean active = false;
@@ -102,8 +102,8 @@ public class DebugDraw {
             return;
         }
 
-        computeBuffer(linesBatch);
         computePointsBuffer(pointsBatch);
+        computeBuffer(linesBatch);
 
         if (ignoreDepthTest) {
             glDisable(GL_DEPTH_TEST);
@@ -130,18 +130,7 @@ public class DebugDraw {
                 return;
             }
 
-            Vector3 pos = point.getPosition();
-            Color color = point.getColor();
-
-            batch.vertexArray[batch.vertexIndex + 0] = pos.x;
-            batch.vertexArray[batch.vertexIndex + 1] = pos.y;
-            batch.vertexArray[batch.vertexIndex + 2] = pos.z;
-            batch.vertexArray[batch.vertexIndex + 3] = color.r();
-            batch.vertexArray[batch.vertexIndex + 4] = color.g();
-            batch.vertexArray[batch.vertexIndex + 5] = color.b();
-            batch.vertexIndex += 6;
-
-            batch.count++;
+            addPointToVertexBuffer(batch, point.getPosition(), point.getColor());
         }
     }
 
@@ -171,20 +160,31 @@ public class DebugDraw {
                 Vector3 v7 = new Vector3(aabb.getMaxX(), aabb.getMaxY(), aabb.getMaxZ());
                 Vector3 v8 = new Vector3(aabb.getMinX(), aabb.getMaxY(), aabb.getMaxZ());
 
-                addLineToVertexBuffer(batch, v1, v2, color);
-                addLineToVertexBuffer(batch, v2, v3, color);
-                addLineToVertexBuffer(batch, v3, v4, color);
-                addLineToVertexBuffer(batch, v4, v1, color);
+                addLineToVertexBuffer(linesBatch, v1, v2, color);
+                addLineToVertexBuffer(linesBatch, v2, v3, color);
+                addLineToVertexBuffer(linesBatch, v3, v4, color);
+                addLineToVertexBuffer(linesBatch, v4, v1, color);
 
-                addLineToVertexBuffer(batch, v5, v6, color);
-                addLineToVertexBuffer(batch, v6, v7, color);
-                addLineToVertexBuffer(batch, v7, v8, color);
-                addLineToVertexBuffer(batch, v8, v5, color);
+                addLineToVertexBuffer(linesBatch, v5, v6, color);
+                addLineToVertexBuffer(linesBatch, v6, v7, color);
+                addLineToVertexBuffer(linesBatch, v7, v8, color);
+                addLineToVertexBuffer(linesBatch, v8, v5, color);
 
-                addLineToVertexBuffer(batch, v1, v5, color);
-                addLineToVertexBuffer(batch, v2, v6, color);
-                addLineToVertexBuffer(batch, v3, v7, color);
-                addLineToVertexBuffer(batch, v4, v8, color);
+                addLineToVertexBuffer(linesBatch, v1, v5, color);
+                addLineToVertexBuffer(linesBatch, v2, v6, color);
+                addLineToVertexBuffer(linesBatch, v3, v7, color);
+                addLineToVertexBuffer(linesBatch, v4, v8, color);
+
+                Color edgeColor = Color.WHITE;
+
+                addPointToVertexBuffer(pointsBatch, v1, edgeColor);
+                addPointToVertexBuffer(pointsBatch, v2, edgeColor);
+                addPointToVertexBuffer(pointsBatch, v3, edgeColor);
+                addPointToVertexBuffer(pointsBatch, v4, edgeColor);
+                addPointToVertexBuffer(pointsBatch, v5, edgeColor);
+                addPointToVertexBuffer(pointsBatch, v6, edgeColor);
+                addPointToVertexBuffer(pointsBatch, v7, edgeColor);
+                addPointToVertexBuffer(pointsBatch, v8, edgeColor);
             }
         }
     }
@@ -211,6 +211,18 @@ public class DebugDraw {
         batch.vertexArray[batch.vertexIndex + 0] = tox;
         batch.vertexArray[batch.vertexIndex + 1] = toy;
         batch.vertexArray[batch.vertexIndex + 2] = toz;
+        batch.vertexArray[batch.vertexIndex + 3] = color.r();
+        batch.vertexArray[batch.vertexIndex + 4] = color.g();
+        batch.vertexArray[batch.vertexIndex + 5] = color.b();
+        batch.vertexIndex += 6;
+
+        batch.count++;
+    }
+
+    private static void addPointToVertexBuffer(RenderBatch batch, Vector3 pos, Color color) {
+        batch.vertexArray[batch.vertexIndex + 0] = pos.x;
+        batch.vertexArray[batch.vertexIndex + 1] = pos.y;
+        batch.vertexArray[batch.vertexIndex + 2] = pos.z;
         batch.vertexArray[batch.vertexIndex + 3] = color.r();
         batch.vertexArray[batch.vertexIndex + 4] = color.g();
         batch.vertexArray[batch.vertexIndex + 5] = color.b();

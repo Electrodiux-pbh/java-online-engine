@@ -1,5 +1,6 @@
-package com.electrodiux.graphics;
+package com.electrodiux.graphics.lightning;
 
+import com.electrodiux.graphics.Color;
 import com.electrodiux.math.Vector3;
 
 public class Light {
