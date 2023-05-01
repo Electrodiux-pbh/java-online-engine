@@ -26,3 +26,13 @@ There is a `com.electrodiux.main` packet where you can find 3 different Main cla
   - `Server Connection`: Starts the game and connects to a given server
   - `Server`: Starts a server at a given port
 - `MainServer`: This class starts the server
+
+## Execute program as a Jarfile
+
+If you want to execute the program with an external jar you can compile it including all libraries inside. Or dowload/include libraries into a separated folder and execute the jar with the following command:<br>
+
+In this example the libraries folder is `./libraries`, the jarfile is `./OnlineEngine.jar` and the main class we want to execute is `com.electrodiux.main.Main`
+
+```cmd
+java -cp "libraries/*;OnlineEngine.jar" com.electrodiux.main.Main
+```
