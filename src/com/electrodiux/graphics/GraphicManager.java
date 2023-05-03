@@ -1,6 +1,7 @@
 package com.electrodiux.graphics;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -45,7 +46,7 @@ public class GraphicManager implements Runnable {
     }
 
     public void run() {
-        window = new Window(640, 360, "Online Game");
+        window = new Window(640, 360, "Multiplayer Physics");
 
         GL.createCapabilities();
 
@@ -121,8 +122,9 @@ public class GraphicManager implements Runnable {
             if (texture == null)
                 texture = defaultPlayerTexture;
 
-            Matrix4f transformMatrix = MathUtils.createTransformMatrix(player.position(),
-                    new Vector3(0, -player.rotation().y(), 0), Vector3.ONE);
+            Matrix4f transformMatrix = MathUtils.transformMatrix(player.position(),
+                    new Vector3(0, -player.rotation().y(), 0), 1f,
+                    player.getRigidBody().getTransformMatrix());
 
             shader.setMatrix4f("transformMatrix", transformMatrix);
 
@@ -172,8 +174,8 @@ public class GraphicManager implements Runnable {
 
             Collider collider = entity.getRigidBody().getCollider();
             if (collider instanceof SphereCollider sphere) {
-                Matrix4f transformMatrix = MathUtils.createTransformMatrix(entity.position(), entity.rotation(),
-                        Vector3.mul(Vector3.ONE, sphere.getRadius()));
+                Matrix4f transformMatrix = MathUtils.transformMatrix(entity.position(), entity.rotation(),
+                        Vector3.mul(Vector3.ONE, sphere.getRadius()), entity.getRigidBody().getTransformMatrix());
 
                 shader.setMatrix4f("transformMatrix", transformMatrix);
 
@@ -346,8 +348,13 @@ public class GraphicManager implements Runnable {
             File skinFile = new File("assets/skins/" + username + ".png");
 
             if (skinFile.exists()) {
-                return playerTextures.put(username,
-                        Loader.loadFileTexture(skinFile.getAbsolutePath(), GL11.GL_NEAREST));
+                FileInputStream fis = new FileInputStream(skinFile);
+
+                texture = playerTextures.put(username, Loader.loadTexture(fis, GL11.GL_NEAREST, false));
+
+                fis.close();
+
+                return texture;
             } else {
                 skinFile.getParentFile().mkdirs();
             }
@@ -369,7 +376,11 @@ public class GraphicManager implements Runnable {
             inputStream.close();
             connection.disconnect();
 
-            texture = Loader.loadFileTexture(skinFile.getAbsolutePath(), GL11.GL_NEAREST);
+            FileInputStream fis = new FileInputStream(skinFile);
+
+            texture = Loader.loadTexture(fis, GL11.GL_NEAREST, false);
+
+            fis.close();
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
@@ -462,7 +473,7 @@ public class GraphicManager implements Runnable {
     }
 
     public static final float TILE_SIZE = 2f;
-    public static final int CHUNK_SIZE = 16;
+    public static final int CHUNK_SIZE = 64;
 
     public Model generateTerrain(float[] heights) {
         final int count = CHUNK_SIZE * CHUNK_SIZE;

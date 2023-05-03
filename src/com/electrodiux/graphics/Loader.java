@@ -17,7 +17,10 @@ import org.joml.Vector3f;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.glfw.GLFWImage;
+import org.lwjgl.opengl.EXTTextureFilterAnisotropic;
+import org.lwjgl.opengl.GL;
 import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL14;
 import org.lwjgl.opengl.GL15;
 import org.lwjgl.opengl.GL20;
 import org.lwjgl.opengl.GL30;
@@ -28,6 +31,8 @@ public class Loader {
     private static List<Integer> attributeLists = new ArrayList<Integer>();
     private static List<Integer> buffers = new ArrayList<Integer>();
     private static List<Integer> textures = new ArrayList<Integer>();
+
+    // #region RawModel
 
     public static Model loadRawModel(float[] vertices, int[] indices) {
         return loadRawModel(vertices, indices, null);
@@ -96,6 +101,10 @@ public class Loader {
 
         buffers.add(eboId);
     }
+
+    // #endregion
+
+    // #region OBJ objects
 
     public static Model loadObjModel(File file) throws IOException {
         return loadObjModel(new FileInputStream(file));
@@ -202,7 +211,12 @@ public class Loader {
         normalsBuffer[vertexPointer * 3 + 2] = normal.z;
     }
 
-    public static Texture loadTexture(InputStream inputStream, int filter) throws IOException {
+    // #endregion
+
+    // #region Textures
+
+    public static Texture loadTexture(InputStream inputStream, int filter, boolean usesMipmap, float anisotropicExt)
+            throws IOException {
         byte[] imageData;
         imageData = inputStream.readAllBytes();
 
@@ -231,6 +245,20 @@ public class Loader {
                 throw new IOException("Unknown number of channels '" + channels.get(0) + "'");
             GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, type, width.get(), height.get(), 0, type, GL11.GL_UNSIGNED_BYTE,
                     image);
+
+            if (usesMipmap) {
+                GL30.glGenerateMipmap(GL11.GL_TEXTURE_2D);
+                GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_LINEAR_MIPMAP_LINEAR);
+                GL11.glTexParameterf(GL11.GL_TEXTURE_2D, GL14.GL_TEXTURE_LOD_BIAS, 0f);
+
+                if (GL.getCapabilities().GL_EXT_texture_filter_anisotropic) {
+                    anisotropicExt = Math.min(anisotropicExt,
+                            GL11.glGetFloat(EXTTextureFilterAnisotropic.GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT));
+
+                    GL11.glTexParameterf(GL11.GL_TEXTURE_2D, EXTTextureFilterAnisotropic.GL_TEXTURE_MAX_ANISOTROPY_EXT,
+                            anisotropicExt);
+                }
+            }
         } else {
             throw new IOException("Could not load the texture image");
         }
@@ -244,24 +272,28 @@ public class Loader {
         return new Texture(textureId);
     }
 
+    public static Texture loadTexture(InputStream inputStream, int filter, boolean usesMipmap) throws IOException {
+        return loadTexture(inputStream, filter, usesMipmap, 4.0f);
+    }
+
+    public static Texture loadTexture(InputStream inputStream, boolean usesMipmap) throws IOException {
+        return loadTexture(inputStream, GL11.GL_LINEAR, usesMipmap);
+    }
+
     public static Texture loadTexture(InputStream inputStream) throws IOException {
-        return loadTexture(inputStream, GL11.GL_LINEAR);
+        return loadTexture(inputStream, GL11.GL_LINEAR, true);
     }
 
-    public static Texture loadFileTexture(String fileName) throws IOException {
-        return loadTexture(new FileInputStream(fileName), GL11.GL_LINEAR);
-    }
-
-    public static Texture loadFileTexture(String fileName, int filter) throws IOException {
-        return loadTexture(new FileInputStream(fileName), filter);
+    public static Texture loadTexture(String path, int filter, boolean usesMipmap) throws IOException {
+        return loadTexture(Loader.class.getResourceAsStream(path), filter, usesMipmap);
     }
 
     public static Texture loadTexture(String path, int filter) throws IOException {
-        return loadTexture(Loader.class.getResourceAsStream(path), filter);
+        return loadTexture(Loader.class.getResourceAsStream(path), filter, true);
     }
 
     public static Texture loadTexture(String path) throws IOException {
-        return loadTexture(Loader.class.getResourceAsStream(path), GL11.GL_LINEAR);
+        return loadTexture(Loader.class.getResourceAsStream(path), GL11.GL_LINEAR, true);
     }
 
     public static ByteBuffer loadImage(String path, IntBuffer width, IntBuffer height, IntBuffer channels)
@@ -290,6 +322,8 @@ public class Loader {
 
         return img;
     }
+
+    // #endregion
 
     public static void clear() {
         for (int atrList : attributeLists) {

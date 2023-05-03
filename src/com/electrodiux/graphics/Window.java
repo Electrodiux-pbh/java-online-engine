@@ -40,6 +40,9 @@ public class Window {
         GLFW.glfwWindowHint(GLFW.GLFW_RESIZABLE, GLFW.GLFW_TRUE);
         GLFW.glfwWindowHint(GLFW.GLFW_MAXIMIZED, fullScreen ? GLFW.GLFW_TRUE : GLFW.GLFW_FALSE);
 
+        // Enable antialiasing by default
+        GLFW.glfwWindowHint(GLFW.GLFW_SAMPLES, GLFW.GLFW_TRUE);
+
         glfwWindow = GLFW.glfwCreateWindow(width, height, title, MemoryUtil.NULL, MemoryUtil.NULL);
         if (glfwWindow == MemoryUtil.NULL)
             throw new IllegalStateException("Failed to create the GLFW window");

@@ -5,6 +5,8 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 
+import org.joml.Matrix4f;
+
 import com.electrodiux.Time;
 import com.electrodiux.math.Vector3;
 
@@ -12,6 +14,7 @@ public class RigidBody implements Serializable {
 
     private Vector3 position;
     private Vector3 rotation;
+    private transient Matrix4f transformMatrix;
 
     private float mass;
     private Vector3 centerOfMass;
@@ -170,6 +173,13 @@ public class RigidBody implements Serializable {
 
     public void rotation(Vector3 rotation) {
         this.rotation.set(rotation);
+    }
+
+    public Matrix4f getTransformMatrix() {
+        if (transformMatrix == null) {
+            transformMatrix = new Matrix4f();
+        }
+        return transformMatrix;
     }
 
     public Vector3 velocity() {
