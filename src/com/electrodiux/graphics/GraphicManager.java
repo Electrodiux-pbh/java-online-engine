@@ -1,5 +1,7 @@
 package com.electrodiux.graphics;
 
+import static com.electrodiux.terrain.Chunk.CHUNK_SIZE;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -7,8 +9,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
@@ -24,10 +29,12 @@ import com.electrodiux.World;
 import com.electrodiux.entity.ColliderEntity;
 import com.electrodiux.entity.Entity;
 import com.electrodiux.graphics.lightning.GlobalLight;
+import com.electrodiux.graphics.lightning.Light;
 import com.electrodiux.math.MathUtils;
 import com.electrodiux.math.Vector3;
 import com.electrodiux.physics.Collider;
 import com.electrodiux.physics.SphereCollider;
+import com.electrodiux.terrain.Chunk;
 
 public class GraphicManager implements Runnable {
 
@@ -55,6 +62,7 @@ public class GraphicManager implements Runnable {
         Mouse.configureMouse(window);
 
         load();
+        transformMatrix = new Matrix4f();
 
         GL11.glCullFace(GL11.GL_BACK);
 
@@ -92,9 +100,24 @@ public class GraphicManager implements Runnable {
     private Texture defaultPlayerTexture;
 
     private GlobalLight globalLight;
+    private static final int MAX_LIGHTS = 10;
+    private List<Light> lights = new ArrayList<Light>();
 
     private Model chunkModel;
     private Texture chunkTexture;
+
+    private Matrix4f transformMatrix;
+
+    private void prepareRender() {
+        // clear depth buffer and color buffer
+        GL11.glEnable(GL11.GL_DEPTH_TEST);
+        GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
+        camera.clearColor();
+
+        camera.setProjectionsToShader(shader);
+
+        setLights();
+    }
 
     private void render() {
         prepareRender();
@@ -105,8 +128,13 @@ public class GraphicManager implements Runnable {
 
         renderEntitiesColliders();
 
-        shader.setBoolean("usingTexture", true);
-        renderObject(chunkModel, chunkTexture, new Matrix4f());
+        if (chunkModel != null) {
+            shader.setBoolean("usingTexture", true);
+            transformMatrix.identity();
+            renderObject(chunkModel, chunkTexture, transformMatrix);
+        } else if (world.getChunk() != null) {
+            chunkModel = generateTerrainModel(world.getChunk());
+        }
 
         GL30.glBindVertexArray(playerModel.getVaoId());
 
@@ -122,9 +150,8 @@ public class GraphicManager implements Runnable {
             if (texture == null)
                 texture = defaultPlayerTexture;
 
-            Matrix4f transformMatrix = MathUtils.transformMatrix(player.position(),
-                    new Vector3(0, -player.rotation().y(), 0), 1f,
-                    player.getRigidBody().getTransformMatrix());
+            MathUtils.transformMatrix(player.position(), new Vector3(0, -player.rotation().y(), 0), 1f,
+                    transformMatrix);
 
             shader.setMatrix4f("transformMatrix", transformMatrix);
 
@@ -139,7 +166,7 @@ public class GraphicManager implements Runnable {
                 texture.unbind();
         }
 
-        enableDisableAttribArrays();
+        disableVertexAttribArrays();
 
         GL30.glBindVertexArray(0);
 
@@ -148,15 +175,40 @@ public class GraphicManager implements Runnable {
         DebugDraw.render(camera);
     }
 
-    private void prepareRender() {
-        // clear depth buffer and color buffer
-        GL11.glEnable(GL11.GL_DEPTH_TEST);
-        GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
-        camera.clearColor();
+    private int[] lightsPositions;
+    private int[] lightsColors;
+    private int[] lightsAttenuations;
 
-        camera.setProjectionsToShader(shader);
-        shader.setVector3("lightDirection", globalLight.getLightDirection());
-        shader.setColor("lightColor", Color.WHITE);
+    private void setLights() {
+        shader.setVector3("globalLightDirection", globalLight.getLightDirection());
+        shader.setColor("globalLightColor", globalLight.getColor());
+
+        if (lightsPositions == null) {
+            lightsPositions = shader.getUniformsLocations("spotLightsPositions", MAX_LIGHTS);
+        }
+        if (lightsColors == null) {
+            lightsColors = shader.getUniformsLocations("spotLightsColors", MAX_LIGHTS);
+        }
+        if (lightsAttenuations == null) {
+            lightsAttenuations = shader.getUniformsLocations("spotLightsAttenuations", MAX_LIGHTS);
+        }
+
+        for (int i = 0; i < MAX_LIGHTS; i++) {
+            if (i < lights.size()) {
+                Light light = lights.get(i);
+                GL20.glUniform3f(lightsPositions[i], light.getLightPos().x(), light.getLightPos().y(),
+                        light.getLightPos().z());
+                GL20.glUniform4f(lightsColors[i], light.getColor().r(), light.getColor().g(),
+                        light.getColor().b(), 1);
+                GL20.glUniform3f(lightsAttenuations[i], light.getAttenuation().x(), light.getAttenuation().y(),
+                        light.getAttenuation().z());
+            } else {
+                GL20.glUniform3f(lightsPositions[i], 0, 0, 0);
+                GL20.glUniform4f(lightsColors[i], 0, 0, 0, 0);
+                GL20.glUniform3f(lightsAttenuations[i], 1, 0, 0);
+            }
+        }
+
     }
 
     private void renderEntitiesColliders() {
@@ -174,8 +226,8 @@ public class GraphicManager implements Runnable {
 
             Collider collider = entity.getRigidBody().getCollider();
             if (collider instanceof SphereCollider sphere) {
-                Matrix4f transformMatrix = MathUtils.transformMatrix(entity.position(), entity.rotation(),
-                        Vector3.mul(Vector3.ONE, sphere.getRadius()), entity.getRigidBody().getTransformMatrix());
+                MathUtils.transformMatrix(entity.position(), entity.rotation(),
+                        Vector3.mul(Vector3.ONE, sphere.getRadius()), transformMatrix);
 
                 shader.setMatrix4f("transformMatrix", transformMatrix);
 
@@ -198,24 +250,8 @@ public class GraphicManager implements Runnable {
 
                 GL11.glDrawElements(mode, sphereModel.getVertexCount(), GL11.GL_UNSIGNED_INT, 0);
 
-                enableDisableAttribArrays();
+                disableVertexAttribArrays();
             }
-            // else if (collider instanceof BoxCollider box) {
-            // Matrix4f transformMatrix =
-            // MathUtils.createTransformMatrix(entity.position().getAdded(box.getCenter()),
-            // entity.rotation(), box.getSize());
-
-            // shader.setMatrix4f("transformMatrix", transformMatrix);
-
-            // GL30.glBindVertexArray(cubeModel.getVaoId());
-
-            // enableVertexAttribArrays();
-
-            // GL11.glDrawElements(GL11.GL_TRIANGLES, cubeModel.getVertexCount(),
-            // GL11.GL_UNSIGNED_INT, 0);
-
-            // enableDisableAttribArrays();
-            // }
         }
     }
 
@@ -225,13 +261,25 @@ public class GraphicManager implements Runnable {
         GL20.glEnableVertexAttribArray(2);
     }
 
-    private void enableDisableAttribArrays() {
+    private void disableVertexAttribArrays() {
         GL20.glDisableVertexAttribArray(0);
         GL20.glDisableVertexAttribArray(1);
         GL20.glDisableVertexAttribArray(2);
     }
 
     private void renderDebugEntity(Entity entity) {
+        if (world.getChunk() != null) {
+            Chunk chunk = world.getChunk();
+
+            float x = entity.position().x();
+            float z = entity.position().z();
+
+            Vector3 from = new Vector3(x, chunk.getHeightAt(x, z), z);
+
+            DebugDraw.addPoint(from, Color.RED);
+            DebugDraw.addLine(from, from.getAdded(chunk.getSlopeAt(x, z)), Color.PINK);
+        }
+
         DebugDraw.addLine(entity.position(), entity.position().getAdded(entity.getRigidBody().velocity()), Color.LIME);
 
         Collider playerCollider = player.getRigidBody().getCollider();
@@ -270,15 +318,24 @@ public class GraphicManager implements Runnable {
         if (texture != null)
             texture.unbind();
 
-        enableDisableAttribArrays();
+        disableVertexAttribArrays();
 
         GL30.glBindVertexArray(0);
     }
 
+    private static Color NIGHT_LIGHT = new Color("#070c14");
+    private static Color DAY_LIGHT = new Color("#fff5c7");
+
     private void update(float deltaTime) {
+        // float factor = (float) ((1 + Math.sin(Time.time() / 10f)) / 2.0f);
+        // Color.lerpColors(NIGHT_LIGHT, DAY_LIGHT, factor, globalLight.getColor());
+        // Color.lerpColors(NIGHT_LIGHT, Color.LIGHT_BLUE, factor,
+        // camera.getBackgroundColor());
+
         cameraDistance = MathUtils.clamp(1, cameraDistance - Mouse.getScrollY(), 50);
 
         Vector3 pos = player.position();
+        playerLight.getLightPos().set(pos);
 
         final float playerHeight = 1.8f;
 
@@ -307,22 +364,29 @@ public class GraphicManager implements Runnable {
             }
         }
 
+        addPendingTextures();
+
     }
+
+    private Light playerLight;
 
     private void load() {
         DebugDraw.load();
 
         camera = new Camera();
-        camera.setBackgroundColor(Color.LIGHT_BLUE);
         camera.setAspectRatio(window.getWidth(), window.getHeight());
-        camera.setzFar(300f);
+        camera.getBackgroundColor().set(Color.LIGHT_BLUE);
+        camera.setzFar(400f);
         cameraDistance = 10f;
 
-        // light = new Light(new Vector3(0, 10, 0), Color.WHITE);
         globalLight = new GlobalLight(new Vector3(1, -2, 0.5f), Color.WHITE);
 
+        lights = new ArrayList<>();
+        playerLight = new Light(new Vector3(), Color.BLUE, new Vector3(1, 0.01f, 0.002f));
+        lights.add(playerLight);
+
         try {
-            shader = Shader.loadShader("/assets/shaders/light.glsl");
+            shader = Shader.loadShader("/assets/shaders/lightning.glsl");
 
             chunkTexture = Loader.loadTexture("/assets/grass.jpg", GL11.GL_NEAREST);
 
@@ -333,8 +397,6 @@ public class GraphicManager implements Runnable {
         } catch (IOException e) {
             e.printStackTrace();
         }
-
-        chunkModel = generateTerrain(new float[CHUNK_SIZE * CHUNK_SIZE]);
     }
 
     private Texture getPlayerTexture(String username) {
@@ -342,53 +404,79 @@ public class GraphicManager implements Runnable {
             return playerTextures.get(username);
         }
 
-        Texture texture = null;
+        Thread loadThread = new Thread(loadSkin(username));
+        loadThread.setPriority(Thread.MIN_PRIORITY);
+        loadThread.start();
 
-        try {
-            File skinFile = new File("assets/skins/" + username + ".png");
+        playerTextures.put(username, defaultPlayerTexture);
+        return defaultPlayerTexture;
+    }
 
-            if (skinFile.exists()) {
+    private Map<String, byte[]> pendigTexturesToLoad = new HashMap<String, byte[]>();
+
+    private void addPendingTextures() {
+        for (Entry<String, byte[]> entry : pendigTexturesToLoad.entrySet()) {
+            String username;
+            byte[] imageBytes;
+
+            try {
+                username = entry.getKey();
+                imageBytes = entry.getValue();
+            } catch (IllegalStateException ise) {
+                continue;
+            }
+
+            try {
+                Texture texture = Loader.loadTexture(imageBytes, GL11.GL_NEAREST, false,
+                        Loader.DEFAULT_ANISOTROPIC_EXT);
+                playerTextures.put(username, texture);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private Runnable loadSkin(String username) {
+        return () -> {
+            try {
+                File skinFile = new File("assets/skins/" + username + ".png");
+
+                if (skinFile.exists()) {
+                    FileInputStream fis = new FileInputStream(skinFile);
+
+                    pendigTexturesToLoad.put(username, fis.readAllBytes());
+
+                    fis.close();
+                } else {
+                    skinFile.getParentFile().mkdirs();
+                }
+
+                URL url = new URL("https://minecraft.tools/download-skin/" + username);
+                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                connection.setRequestMethod("GET");
+
+                InputStream inputStream = connection.getInputStream();
+                FileOutputStream outputStream = new FileOutputStream(skinFile);
+
+                byte[] buffer = new byte[1024];
+                int bytesRead;
+                while ((bytesRead = inputStream.read(buffer)) != -1) {
+                    outputStream.write(buffer, 0, bytesRead);
+                }
+
+                outputStream.close();
+                inputStream.close();
+                connection.disconnect();
+
                 FileInputStream fis = new FileInputStream(skinFile);
 
-                texture = playerTextures.put(username, Loader.loadTexture(fis, GL11.GL_NEAREST, false));
+                pendigTexturesToLoad.put(username, fis.readAllBytes());
 
                 fis.close();
-
-                return texture;
-            } else {
-                skinFile.getParentFile().mkdirs();
+            } catch (IOException e) {
+                e.printStackTrace();
             }
-
-            URL url = new URL("https://minecraft.tools/download-skin/" + username);
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-            connection.setRequestMethod("GET");
-
-            InputStream inputStream = connection.getInputStream();
-            FileOutputStream outputStream = new FileOutputStream(skinFile);
-
-            byte[] buffer = new byte[1024];
-            int bytesRead;
-            while ((bytesRead = inputStream.read(buffer)) != -1) {
-                outputStream.write(buffer, 0, bytesRead);
-            }
-
-            outputStream.close();
-            inputStream.close();
-            connection.disconnect();
-
-            FileInputStream fis = new FileInputStream(skinFile);
-
-            texture = Loader.loadTexture(fis, GL11.GL_NEAREST, false);
-
-            fis.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
-
-        }
-
-        playerTextures.put(username, texture);
-        return texture;
+        };
     }
 
     // #region Basic Shapes Generation
@@ -472,10 +560,9 @@ public class GraphicManager implements Runnable {
         return textureCoords;
     }
 
-    public static final float TILE_SIZE = 2f;
-    public static final int CHUNK_SIZE = 64;
+    public Model generateTerrainModel(Chunk chunk) {
+        float[] heights = chunk.getHeights();
 
-    public Model generateTerrain(float[] heights) {
         final int count = CHUNK_SIZE * CHUNK_SIZE;
 
         float[] vertices = new float[count * 3];
@@ -487,9 +574,9 @@ public class GraphicManager implements Runnable {
         int vertexPointer = 0;
         for (int i = 0; i < CHUNK_SIZE; i++) {
             for (int j = 0; j < CHUNK_SIZE; j++) {
-                vertices[vertexPointer * 3] = j * TILE_SIZE;
+                vertices[vertexPointer * 3] = j;
                 vertices[vertexPointer * 3 + 1] = heights[j + i * CHUNK_SIZE]; // use height value from heights array
-                vertices[vertexPointer * 3 + 2] = i * TILE_SIZE;
+                vertices[vertexPointer * 3 + 2] = i;
 
                 // calculate normals using neighboring height values
                 float heightL = j == 0 ? heights[j + i * CHUNK_SIZE] : heights[(j - 1) + i * CHUNK_SIZE];

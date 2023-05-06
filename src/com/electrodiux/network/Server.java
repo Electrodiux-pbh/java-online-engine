@@ -27,6 +27,9 @@ public class Server extends WorldUpdater {
 
     public void start(World world) {
         this.world = world;
+
+        world.generateChunk(0, 0);
+
         super.start();
     }
 
@@ -165,7 +168,7 @@ public class Server extends WorldUpdater {
         clientHandler.setPlayer(player);
 
         ClientConnectPacket responsePacket = new ClientConnectPacket(player.getName(), player.getUUID(),
-                getWorld().getPlayersArray(), getWorld().getEntitiesWithoutPlayers());
+                getWorld().getPlayersArray(), getWorld().getEntitiesWithoutPlayers(), world.getChunk());
 
         return responsePacket;
     }

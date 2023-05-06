@@ -41,6 +41,31 @@ public final class AABB implements Serializable {
         }
     }
 
+    public void recomputeBoundaries(Vector3... vertices) {
+        minX = Float.MAX_VALUE;
+        maxX = -Float.MIN_VALUE;
+        minY = Float.MAX_VALUE;
+        maxY = -Float.MIN_VALUE;
+        minZ = Float.MAX_VALUE;
+        maxZ = -Float.MIN_VALUE;
+
+        for (Vector3 vertex : vertices) {
+            if (vertex.x < minX)
+                minX = vertex.x;
+            if (vertex.y < minY)
+                minY = vertex.y;
+            if (vertex.z < minZ)
+                minZ = vertex.z;
+
+            if (vertex.x > maxX)
+                maxX = vertex.x;
+            if (vertex.y > maxY)
+                maxY = vertex.y;
+            if (vertex.z > maxZ)
+                maxZ = vertex.z;
+        }
+    }
+
     public void recomputeBoundaries(Vector3 position, Vector3 size) {
         float xSize = size.x / 2.0f;
         minX = position.x - xSize;

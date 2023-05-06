@@ -215,11 +215,10 @@ public class Loader {
 
     // #region Textures
 
-    public static Texture loadTexture(InputStream inputStream, int filter, boolean usesMipmap, float anisotropicExt)
-            throws IOException {
-        byte[] imageData;
-        imageData = inputStream.readAllBytes();
+    public static final float DEFAULT_ANISOTROPIC_EXT = 4.0f;
 
+    public static Texture loadTexture(byte[] imageBytes, int filter, boolean usesMipmap, float anisotropicExt)
+            throws IOException {
         int textureId = GL11.glGenTextures();
 
         GL11.glBindTexture(GL11.GL_TEXTURE_2D, textureId);
@@ -234,8 +233,8 @@ public class Loader {
         IntBuffer channels = BufferUtils.createIntBuffer(1);
         STBImage.nstbi_set_flip_vertically_on_load(GLFW.GLFW_TRUE);
 
-        ByteBuffer imageBuffer = BufferUtils.createByteBuffer(imageData.length);
-        imageBuffer.put(imageData).flip();
+        ByteBuffer imageBuffer = BufferUtils.createByteBuffer(imageBytes.length);
+        imageBuffer.put(imageBytes).flip();
 
         ByteBuffer image = STBImage.stbi_load_from_memory(imageBuffer, width, height, channels, 0);
 
@@ -272,16 +271,23 @@ public class Loader {
         return new Texture(textureId);
     }
 
-    public static Texture loadTexture(InputStream inputStream, int filter, boolean usesMipmap) throws IOException {
-        return loadTexture(inputStream, filter, usesMipmap, 4.0f);
+    public static Texture loadTexture(InputStream in, int filter, boolean usesMipmap, float anisotropicExt)
+            throws IOException {
+        byte[] imageBytes = in.readAllBytes();
+        return loadTexture(imageBytes, filter, usesMipmap, anisotropicExt);
     }
 
-    public static Texture loadTexture(InputStream inputStream, boolean usesMipmap) throws IOException {
-        return loadTexture(inputStream, GL11.GL_LINEAR, usesMipmap);
+    public static Texture loadTexture(InputStream in, int filter, boolean usesMipmap) throws IOException {
+        byte[] imageBytes = in.readAllBytes();
+        return loadTexture(imageBytes, filter, usesMipmap, DEFAULT_ANISOTROPIC_EXT);
     }
 
-    public static Texture loadTexture(InputStream inputStream) throws IOException {
-        return loadTexture(inputStream, GL11.GL_LINEAR, true);
+    public static Texture loadTexture(InputStream in, boolean usesMipmap) throws IOException {
+        return loadTexture(in, GL11.GL_LINEAR, usesMipmap);
+    }
+
+    public static Texture loadTexture(InputStream in) throws IOException {
+        return loadTexture(in, GL11.GL_LINEAR, true);
     }
 
     public static Texture loadTexture(String path, int filter, boolean usesMipmap) throws IOException {
@@ -296,15 +302,19 @@ public class Loader {
         return loadTexture(Loader.class.getResourceAsStream(path), GL11.GL_LINEAR, true);
     }
 
-    public static ByteBuffer loadImage(String path, IntBuffer width, IntBuffer height, IntBuffer channels)
+    public static ByteBuffer loadImage(byte[] imageBytes, IntBuffer width, IntBuffer height, IntBuffer channels)
             throws IOException {
         STBImage.nstbi_set_flip_vertically_on_load(GLFW.GLFW_FALSE);
-        ByteBuffer image = STBImage.stbi_load(path, width, height, channels, 0);
+
+        ByteBuffer imageBuffer = BufferUtils.createByteBuffer(imageBytes.length);
+        imageBuffer.put(imageBytes).flip();
+
+        ByteBuffer image = STBImage.stbi_load_from_memory(imageBuffer, width, height, channels, 0);
 
         if (image != null) {
             return image;
         } else {
-            throw new IOException("Could not load the texture image '" + path + "'");
+            throw new IOException("Could not load the texture image");
         }
     }
 
@@ -313,7 +323,10 @@ public class Loader {
         IntBuffer h = BufferUtils.createIntBuffer(1);
         IntBuffer c = BufferUtils.createIntBuffer(1);
 
-        ByteBuffer buff = loadImage(path, w, h, c);
+        InputStream in = Loader.class.getResourceAsStream(path);
+        byte[] imageBytes = in.readAllBytes();
+
+        ByteBuffer buff = loadImage(imageBytes, w, h, c);
         GLFWImage img = new GLFWImage(buff);
         img.pixels(buff);
         img.width(w.get());

@@ -45,11 +45,11 @@ public final class Time {
 
     static void startTime() {
         startTime = milisecondsToSeconds(System.currentTimeMillis());
-        time = milisecondsToSeconds(System.currentTimeMillis()) - startTime;
+        updateTime();
     }
 
     static void updateTime() {
-        time = milisecondsToSeconds(System.currentTimeMillis());
+        time = milisecondsToSeconds(System.currentTimeMillis()) - startTime;
     }
 
     static void increaseUpdateCount() {

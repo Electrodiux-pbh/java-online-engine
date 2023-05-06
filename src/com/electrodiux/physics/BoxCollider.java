@@ -79,7 +79,8 @@ public class BoxCollider extends Collider {
             // Calculate the MTD
             Vector3 mtd = offset.getNormalized().mul(sphereCollider.getRadius() - distance);
 
-            return CollisionResult.successCollision(mtd, box, boxMassCenter, sphere, sphereMassCenter);
+            return CollisionResult.successCollision(mtd, box.velocity(), boxMassCenter, sphere.velocity(),
+                    sphereMassCenter);
         }
 
         return CollisionResult.failed();

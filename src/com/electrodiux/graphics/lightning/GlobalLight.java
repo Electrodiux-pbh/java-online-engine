@@ -10,7 +10,7 @@ public class GlobalLight {
 
     public GlobalLight(Vector3 lightDirection, Color color) {
         this.lightDirection = lightDirection;
-        this.color = color;
+        this.color = new Color(color);
     }
 
     public GlobalLight() {

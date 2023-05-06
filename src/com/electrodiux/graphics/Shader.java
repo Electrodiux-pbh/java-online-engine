@@ -82,6 +82,10 @@ public class Shader {
 
             compile(vertexSrc, fragmentSrc);
 
+            mat2Buff = BufferUtils.createFloatBuffer(4); // 2 * 2 = 4
+            mat3Buff = BufferUtils.createFloatBuffer(9); // 3 * 3 = 9
+            mat4Buff = BufferUtils.createFloatBuffer(16); // 4 * 4 = 16
+
         } catch (IOException e) {
             throw new IOException("Could not open file for shader: '" + this.filePath + "'", e);
         }
@@ -137,97 +141,149 @@ public class Shader {
         return id;
     }
 
+    // #region Uniform setters
+
+    private FloatBuffer mat2Buff, mat3Buff, mat4Buff;
+
     public void setMatrix4f(String varName, Matrix4f matrix) {
-        int varLocation = GL20.glGetUniformLocation(shaderProgram, varName);
-        use();
-        FloatBuffer matrixBuff = BufferUtils.createFloatBuffer(16); // 4 * 4 matrix
-        matrix.get(matrixBuff);
-        GL20.glUniformMatrix4fv(varLocation, false, matrixBuff);
+        matrix.get(mat4Buff);
+        GL20.glUniformMatrix4fv(startSetVariable(varName), false, mat4Buff);
     }
 
     public void setMatrix3f(String varName, Matrix3f matrix) {
-        int varLocation = GL20.glGetUniformLocation(shaderProgram, varName);
-        use();
-        FloatBuffer matrixBuff = BufferUtils.createFloatBuffer(9); // 3 * 3 matrix
-        matrix.get(matrixBuff);
-        GL20.glUniformMatrix3fv(varLocation, false, matrixBuff);
+        matrix.get(mat3Buff);
+        GL20.glUniformMatrix3fv(startSetVariable(varName), false, mat3Buff);
     }
 
     public void setMatrix2f(String varName, Matrix2f matrix) {
-        int varLocation = GL20.glGetUniformLocation(shaderProgram, varName);
-        use();
-        FloatBuffer matrixBuff = BufferUtils.createFloatBuffer(4); // 2 * 2 matrix
-        matrix.get(matrixBuff);
-        GL20.glUniformMatrix2fv(varLocation, false, matrixBuff);
+        matrix.get(mat2Buff);
+        GL20.glUniformMatrix2fv(startSetVariable(varName), false, mat2Buff);
     }
 
     public void setVector4f(String varName, Vector4f vec) {
-        int varLocation = GL20.glGetUniformLocation(shaderProgram, varName);
-        use();
-        GL20.glUniform4f(varLocation, vec.x, vec.y, vec.z, vec.w);
+        GL20.glUniform4f(startSetVariable(varName), vec.x, vec.y, vec.z, vec.w);
     }
 
     public void setColor(String varName, Color value) {
-        int varLocation = GL20.glGetUniformLocation(shaderProgram, varName);
-        use();
-        GL20.glUniform4f(varLocation, value.r(), value.g(), value.b(), value.a());
+        GL20.glUniform4f(startSetVariable(varName), value.r(), value.g(), value.b(), value.a());
     }
 
     public void setVector3f(String varName, Vector3f vec) {
-        int varLocation = GL20.glGetUniformLocation(shaderProgram, varName);
-        use();
-        GL20.glUniform3f(varLocation, vec.x, vec.y, vec.z);
+        GL20.glUniform3f(startSetVariable(varName), vec.x, vec.y, vec.z);
     }
 
     public void setVector3(String varName, Vector3 vec) {
-        int varLocation = GL20.glGetUniformLocation(shaderProgram, varName);
-        use();
-        GL20.glUniform3f(varLocation, vec.x(), vec.y(), vec.z());
+        GL20.glUniform3f(startSetVariable(varName), vec.x(), vec.y(), vec.z());
     }
 
     public void setVector2f(String varName, Vector2f vec) {
-        int varLocation = GL20.glGetUniformLocation(shaderProgram, varName);
-        use();
-        GL20.glUniform2f(varLocation, vec.x, vec.y);
+        GL20.glUniform2f(startSetVariable(varName), vec.x, vec.y);
     }
 
     public void setVector2(String varName, Vector2 vec) {
-        int varLocation = GL20.glGetUniformLocation(shaderProgram, varName);
-        use();
-        GL20.glUniform2f(varLocation, vec.x(), vec.y());
+        GL20.glUniform2f(startSetVariable(varName), vec.x(), vec.y());
+    }
+
+    public void setMatrix4fArray(String varName, Matrix4f[] matrices) {
+        int[] locations = getUniformsLocations(varName, matrices.length);
+        for (int i = 0; i < matrices.length; i++) {
+            matrices[i].get(mat4Buff);
+            GL20.glUniformMatrix4fv(locations[i], false, mat4Buff);
+        }
+    }
+
+    public void setMatrix3fArray(String varName, Matrix3f[] matrices) {
+        int[] locations = getUniformsLocations(varName, matrices.length);
+        for (int i = 0; i < matrices.length; i++) {
+            matrices[i].get(mat3Buff);
+            GL20.glUniformMatrix3fv(locations[i], false, mat3Buff);
+        }
+    }
+
+    public void setMatrix2fArray(String varName, Matrix2f[] matrices) {
+        int[] locations = getUniformsLocations(varName, matrices.length);
+        for (int i = 0; i < matrices.length; i++) {
+            matrices[i].get(mat2Buff);
+            GL20.glUniformMatrix2fv(locations[i], false, mat2Buff);
+        }
+    }
+
+    public void setVector4fArray(String varName, Vector4f[] vectors) {
+        int[] locations = getUniformsLocations(varName, vectors.length);
+        for (int i = 0; i < vectors.length; i++) {
+            GL20.glUniform4f(locations[i], vectors[i].x, vectors[i].y, vectors[i].z, vectors[i].w);
+        }
+    }
+
+    public void setColorArray(String varName, Color[] values) {
+        int[] locations = getUniformsLocations(varName, values.length);
+        for (int i = 0; i < values.length; i++) {
+            GL20.glUniform4f(locations[i], values[i].r(), values[i].g(), values[i].b(), values[i].a());
+        }
+    }
+
+    public void setVector3fArray(String varName, Vector3f[] vectors) {
+        int[] locations = getUniformsLocations(varName, vectors.length);
+        for (int i = 0; i < vectors.length; i++) {
+            GL20.glUniform3f(locations[i], vectors[i].x, vectors[i].y, vectors[i].z);
+        }
+    }
+
+    public void setVector3Array(String varName, Vector3[] vectors) {
+        int[] locations = getUniformsLocations(varName, vectors.length);
+        for (int i = 0; i < vectors.length; i++) {
+            GL20.glUniform3f(locations[i], vectors[i].x(), vectors[i].y(), vectors[i].z());
+        }
+    }
+
+    public void setVector2fArray(String varName, Vector2f[] vectors) {
+        int[] locations = getUniformsLocations(varName, vectors.length);
+        for (int i = 0; i < vectors.length; i++) {
+            GL20.glUniform2f(locations[i], vectors[i].x, vectors[i].y);
+        }
+    }
+
+    public void setVector2Array(String varName, Vector2[] vectors) {
+        int[] locations = getUniformsLocations(varName, vectors.length);
+        for (int i = 0; i < vectors.length; i++) {
+            GL20.glUniform2f(locations[i], vectors[i].x(), vectors[i].y());
+        }
     }
 
     public void setFloat(String varName, float value) {
-        int varLocation = GL20.glGetUniformLocation(shaderProgram, varName);
-        use();
-        GL20.glUniform1f(varLocation, value);
+        GL20.glUniform1f(startSetVariable(varName), value);
     }
 
     public void setInt(String varName, int value) {
-        int varLocation = GL20.glGetUniformLocation(shaderProgram, varName);
-        use();
-        GL20.glUniform1i(varLocation, value);
+        GL20.glUniform1i(startSetVariable(varName), value);
     }
 
     public void setBoolean(String varName, boolean value) {
-        int varLocation = GL20.glGetUniformLocation(shaderProgram, varName);
-        use();
-        GL20.glUniform1i(varLocation, value ? 1 : 0);
+        GL20.glUniform1i(startSetVariable(varName), value ? 1 : 0);
     }
 
     public void setIntArray(String varName, int[] values) {
-        int varLocation = GL20.glGetUniformLocation(shaderProgram, varName);
+        GL20.glUniform1iv(startSetVariable(varName), values);
+    }
+
+    private int startSetVariable(String varName) {
         use();
-        GL20.glUniform1iv(varLocation, values);
+        return GL20.glGetUniformLocation(shaderProgram, varName);
     }
 
-    public void setTexture(int textureID) {
-        setInt("texture", textureID);
+    public int getUniformLocation(String varName) {
+        return GL20.glGetUniformLocation(shaderProgram, varName);
     }
 
-    public void setTexture(Texture texture) {
-        setTexture(texture.getTextureId());
+    public int[] getUniformsLocations(String varName, int length) {
+        int[] locations = new int[length];
+        for (int i = 0; i < locations.length; i++) {
+            locations[i] = GL20.glGetUniformLocation(shaderProgram, varName + "[" + i + "]");
+        }
+        return locations;
     }
+
+    // #endregion
 
     public void use() {
         if (!beingUsed) {

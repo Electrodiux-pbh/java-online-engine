@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.electrodiux.math.Vector3;
+import com.electrodiux.terrain.Chunk;
 
 public final class PhysicsSystem {
 
@@ -14,6 +15,16 @@ public final class PhysicsSystem {
     public PhysicsSystem(Vector3 gravity) {
         this.rigidBodies = new ArrayList<>();
         this.gravity = new Vector3(gravity);
+    }
+
+    private Chunk chunk;
+
+    public Chunk getChunk() {
+        return chunk;
+    }
+
+    public void setChunk(Chunk chunk) {
+        this.chunk = chunk;
     }
 
     public synchronized void updateSimulation() {
@@ -38,15 +49,27 @@ public final class PhysicsSystem {
     }
 
     private void floorCollision(RigidBody body) {
-        float zone = 0;
-
-        if (body.getCollider() instanceof SphereCollider sphereCollider) {
-            zone = sphereCollider.getRadius();
+        float height = 0;
+        if (chunk != null) {
+            height = chunk.getHeightAt(body.position().x(), body.position().z());
         }
 
-        if (body.position().y() <= zone) {
-            body.velocity().y(0);
-            body.position().y(zone);
+        if (height == 0) {
+            return;
+        }
+
+        float yOffset = 0;
+
+        if (body.getCollider() instanceof SphereCollider sphereCollider) {
+            yOffset = sphereCollider.getRadius();
+        }
+
+        float totalHeight = height + yOffset;
+
+        if (body.position().y() <= totalHeight) {
+            Vector3 slope = chunk.getSlopeAt(body.position().x(), body.position().z());
+            body.velocity().add(slope.x(), 0, slope.z());
+            body.position().y(totalHeight);
             body.friction = 1;
         } else {
             body.friction = 0.5f;
@@ -78,6 +101,38 @@ public final class PhysicsSystem {
 
             floorCollision(body1);
         }
+    }
+
+    private static void calculateCollisionInteraction(RigidBody body1, CollisionResult result) {
+        if (!result.collides())
+            return;
+
+        Vector3 mtd = result.mtd();
+
+        body1.position().add(result.body1Translation());
+
+        Vector3 normal = new Vector3(mtd).normalize();
+
+        // #region Calculate the impulse
+        float velocityAlongNormal = Vector3.dot(normal, body1.velocity());
+
+        final float coefficientOfResitution = 0.8f;
+        float totalImpulse = (-1.0f - coefficientOfResitution) * velocityAlongNormal;
+
+        Vector3 impulse = Vector3.mul(normal, totalImpulse);
+        body1.velocity().add(impulse);
+        // #endregion
+
+        // #region Calculate position Correction
+        float penetrationDepth = mtd.magnitude();
+
+        final float percent = 0.01f; // usually 20% to 80%
+        final float slop = 0.1f; // usually 0.01 to 0.1
+
+        Vector3 correction = normal.getMul(percent * Math.max(penetrationDepth - slop, 0.0f));
+
+        body1.position().subtract(correction);
+        // #endregion
     }
 
     private static void calculateCollisionInteraction(RigidBody body1, RigidBody body2, CollisionResult result) {

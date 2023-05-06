@@ -48,6 +48,22 @@ public class Color implements Serializable {
 		this(values[0], values[1], values[2], values[3]);
 	}
 
+	public Color(String hexColor) {
+		if (hexColor.startsWith("#")) {
+			hexColor = hexColor.substring(1, hexColor.length());
+		}
+
+		this.red = Integer.valueOf(hexColor.substring(0, 2), 16) / 255.0f; // red
+		this.green = Integer.valueOf(hexColor.substring(2, 4), 16) / 255.0f; // green
+		this.blue = Integer.valueOf(hexColor.substring(4, 6), 16) / 255.0f; // blue
+
+		if (hexColor.length() == 6) {
+			this.alpha = 1.0f;
+		} else {
+			this.alpha = Integer.valueOf(hexColor.substring(6, 8), 16) / 255.0f; // alpha
+		}
+	}
+
 	public void set(float r, float g, float b, float a) {
 		this.red = r;
 		this.green = g;
@@ -78,15 +94,21 @@ public class Color implements Serializable {
 		return alpha;
 	}
 
-	public Color lerpColors(Color a, Color b, float t) {
+	public Color lerpColor(Color a, Color b, float t) {
+		return lerpColors(a, b, t, this);
+	}
+
+	public static Color getLerpColor(Color a, Color b, float t) {
+		return lerpColors(a, b, t, new Color());
+	}
+
+	public static Color lerpColors(Color a, Color b, float t, Color output) {
 		t = MathUtils.clamp(0, t, 1);
-		Color c = new Color(
-				MathUtils.lerp(a.red, b.red, t),
+		output.set(MathUtils.lerp(a.red, b.red, t),
 				MathUtils.lerp(a.green, b.green, t),
 				MathUtils.lerp(a.blue, b.blue, t),
 				MathUtils.lerp(a.alpha, b.alpha, t));
-
-		return c;
+		return output;
 	}
 
 	public static Color randomColor() {

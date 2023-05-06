@@ -48,7 +48,8 @@ public class SphereCollider extends Collider {
             Vector3 mdt = body1MassCenter.getSubstract(body2MassCenter);
             mdt.magnitude(radiusSum - centerDistance);
 
-            return CollisionResult.successCollision(mdt, body1, body1MassCenter, body2, body2MassCenter);
+            return CollisionResult.successCollision(mdt, body1.velocity(), body1MassCenter, body2.velocity(),
+                    body2MassCenter);
         }
 
         return CollisionResult.failed();

@@ -83,6 +83,7 @@ public class Client extends LocalPlay {
         world.addPlayer(player);
         world.addPlayers(Arrays.asList(packet.getPlayers()));
         world.addEntities(Arrays.asList(packet.getEntities()));
+        world.setChunk(packet.getChunk());
     }
 
     // #endregion

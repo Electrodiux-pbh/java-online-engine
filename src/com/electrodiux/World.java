@@ -21,6 +21,8 @@ import com.electrodiux.math.Vector3;
 import com.electrodiux.physics.ForceMode;
 import com.electrodiux.physics.PhysicsSystem;
 import com.electrodiux.physics.SphereCollider;
+import com.electrodiux.terrain.Chunk;
+import com.electrodiux.terrain.NoiseGenerator;
 
 public class World {
 
@@ -34,6 +36,8 @@ public class World {
 
     private boolean isServer;
 
+    private Chunk chunk;
+
     public World(boolean isServer) {
         this.isServer = isServer;
 
@@ -43,12 +47,20 @@ public class World {
         events = new EventQueue();
     }
 
-    public EventQueue getEventsQueue() {
-        return eventsQueue;
+    public void generateChunk(int chunkX, int chunkZ) {
+        NoiseGenerator gen = new NoiseGenerator(System.currentTimeMillis());
+        gen.setClampValues(-100, 100);
+        float heights[] = gen.getNoise2D(Chunk.CHUNK_SIZE, Chunk.CHUNK_SIZE, 0, 0, 100, 10, 0.008f, 0.4f);
+        chunk = new Chunk(chunkX, chunkZ, heights);
+        physics.setChunk(chunk);
     }
 
-    public EventQueue getProcesedEventsQueue() {
-        return events;
+    public Chunk getChunk() {
+        return chunk;
+    }
+
+    public void setChunk(Chunk chunk) {
+        this.chunk = chunk;
     }
 
     public synchronized void update(float deltaTime) {
@@ -123,7 +135,7 @@ public class World {
             if (isServer) {
                 if (event.isSpawning()) {
                     ColliderEntity entity = new ColliderEntity(UUID.randomUUID(), new Vector3(player.position()),
-                            new SphereCollider(2.5f));
+                            new SphereCollider(1f));
                     addEntity(entity);
                 }
             }
@@ -156,14 +168,6 @@ public class World {
     private void sendEventToAll(Event event) {
         events.add(event);
     }
-
-    // private void sendEventToAllExcept(Event event, Player exception) {
-    // for (Player player : getPlayers()) {
-    // if (player == exception)
-    // continue;
-    // player.addEvent(event);
-    // }
-    // }
 
     public Player registerPlayer(String name) {
         Player player = new Player(UUID.randomUUID(), name);
@@ -262,6 +266,8 @@ public class World {
         if (!entities.containsKey(player.getUUID())) {
             players.add(player);
 
+            player.position().set(15, 10, 15);
+
             addEntity(player);
 
             events.add(new PlayerConnectionEvent(player, PlayerConnectionEvent.ConnectionType.JOIN));
@@ -299,6 +305,14 @@ public class World {
 
     public int getEntityCount() {
         return entities.size();
+    }
+
+    public EventQueue getEventsQueue() {
+        return eventsQueue;
+    }
+
+    public EventQueue getProcesedEventsQueue() {
+        return events;
     }
 
 }

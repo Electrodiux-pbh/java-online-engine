@@ -1,7 +1,6 @@
 package com.electrodiux.graphics;
 
 import org.joml.Matrix4f;
-import org.joml.Vector3f;
 import org.lwjgl.opengl.GL11;
 
 import com.electrodiux.math.Vector3;
@@ -49,24 +48,23 @@ public class Camera {
 		this.bg = new Color(Color.WHITE);
 
 		this.viewMatrix = new Matrix4f();
+		this.projectionMatrix = new Matrix4f();
 		makeProjection();
 	}
 
 	public void makeProjection() {
-		projectionMatrix = new Matrix4f();
+		projectionMatrix.identity();
 		projectionMatrix.perspective(fov, aspectRatio, zNear, zFar);
 	}
 
 	public Matrix4f getViewMatrix() {
 		viewMatrix.identity();
 
-		viewMatrix.rotate(rotation.x(), new Vector3f(1, 0, 0));
-		viewMatrix.rotate(rotation.y(), new Vector3f(0, 1, 0));
-		viewMatrix.rotate(rotation.z(), new Vector3f(0, 0, 1));
+		viewMatrix.rotate(rotation.x(), 1, 0, 0);
+		viewMatrix.rotate(rotation.y(), 0, 1, 0);
+		viewMatrix.rotate(rotation.z(), 0, 0, 1);
 
-		Vector3f inverseCameraPos = new Vector3f(-position.x(), -position.y(), -position.z());
-
-		viewMatrix.translate(inverseCameraPos);
+		viewMatrix.translate(-position.x(), -position.y(), -position.z());
 		return this.viewMatrix;
 	}
 
